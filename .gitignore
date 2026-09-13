@@ -1,0 +1,9 @@
+# Подстраховка на верхнем уровне — основные правила лежат в backend/.gitignore и frontend/.gitignore
+node_modules/
+.env
+.env.*
+*.log
+*.pid
+dist/
+.DS_Store
+Thumbs.db

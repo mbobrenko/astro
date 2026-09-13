@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: astro-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ASTROLOGY_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false
+      - key: PORT
+        value: 3001
