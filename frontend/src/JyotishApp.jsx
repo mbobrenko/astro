@@ -871,7 +871,7 @@ export default function JyotishApp() {
   ];
 
   return (
-    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: 500, padding: 20, color: "#f1ede4", borderRadius: 12 }}>
+    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>ДЖЙОТИШ</div>
         <div style={{ fontSize: 11, color: "#6f6798", marginTop: 2, fontFamily: "system-ui, sans-serif" }}>
