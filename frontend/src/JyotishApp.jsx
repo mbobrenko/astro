@@ -241,26 +241,22 @@ function dashaComboParts(mahaCode, antarCode, details) {
   return { relationText, strengths: a.strengths, caution: a.caution, aspectText };
 }
 
-// То же самое, но для пратьянтардаши (3-й уровень) — компактнее, но тоже структурированно,
-// а не одной строкой «дом + суть планеты».
-const PRATYANTAR_RELATION_PHRASE = {
-  same: "усиливает и без того активную тему антардаши",
-  friend: "поддерживает тему антардаши, добавляя к ней свою энергию",
-  neutral: "звучит как самостоятельный, независимый фон внутри антардаши",
-  enemy: "создаёт лёгкое трение с темой антардаши — в эти дни возможны сбои ритма",
-};
-
+// То же самое, но для пратьянтардаши (3-й уровень) — короткая формула «+ / −» на каждый
+// под-под-период, а не сплошной текст: плюс (сильная сторона), минус (на что обратить
+// внимание), и, если планета в напряжении с антардашой, — отдельная пометка об этом.
 function pratyantarComboParts(antarCode, code, details) {
   const rel = relation(antarCode, code);
-  const relPhrase = PRATYANTAR_RELATION_PHRASE[rel] || PRATYANTAR_RELATION_PHRASE.neutral;
   const t = DASHA_TEXTS[code];
-  const relationText = `${PLANET_NAMES[code]} ${relPhrase}.`;
-  const themeText = t ? `${t.strengths} ${t.caution}` : (PLANET_CORE[code] || "");
+  const plus = t ? t.strengths : (PLANET_CORE[code] || "");
+  let minus = t ? t.caution : "";
+  if (rel === "enemy") {
+    minus = `${minus} Дополнительно — трение с темой антардаши ${PLANET_NAMES[antarCode]}, возможны сбои ритма в эти дни.`;
+  }
   const aspect = lifeAspectHouseDomain(code, details);
   const aspectText = aspect
-    ? `Натально — ${aspect.house} дом (${HOUSE_MEANINGS[aspect.house]})${aspect.domains.length ? `, сфера «${aspect.domains.join("», «")}»` : ""}.`
+    ? `${aspect.house} дом (${HOUSE_MEANINGS[aspect.house]})${aspect.domains.length ? ` — сфера «${aspect.domains.join("», «")}»` : ""}.`
     : "";
-  return { relationText, themeText, aspectText };
+  return { plus, minus, aspectText, rel };
 }
 
 function domainOccupantCount(details, houses) {
@@ -543,15 +539,19 @@ function PratyantarList({ birth, mdEn, adEn, open, details }) {
         const rel = relation(adCode, code);
         const parts = pratyantarComboParts(adCode, code, details);
         return (
-          <div key={si} style={{ fontSize: 11, color: active ? "#e8c46b" : "#766fa0", padding: "3px 0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div key={si} style={{
+            fontSize: 11, padding: "5px 8px", marginBottom: 1, borderRadius: 5,
+            background: active ? "#211c47" : "transparent",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", color: active ? "#e8c46b" : "#c9c4e8", fontWeight: 600 }}>
               <span>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet} · {RELATION_LABEL[rel]}</span>
-              <span>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
+              <span style={{ fontWeight: 400, color: "#766fa0" }}>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
             </div>
             {parts && (
-              <div style={{ color: "#8b84b8", fontSize: 10.5, lineHeight: 1.5, marginTop: 2 }}>
-                <div>{parts.relationText} {parts.themeText}</div>
-                {parts.aspectText && <div style={{ marginTop: 1 }}>{parts.aspectText}</div>}
+              <div style={{ fontSize: 10.5, lineHeight: 1.5, marginTop: 3 }}>
+                <div style={{ color: "#7fd99a" }}>+ {parts.plus}</div>
+                <div style={{ color: "#e0a8a8" }}>− {parts.minus}</div>
+                {parts.aspectText && <div style={{ color: "#766fa0", marginTop: 1 }}>Сфера: {parts.aspectText}</div>}
               </div>
             )}
           </div>
@@ -615,8 +615,11 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
                 {parts.aspectText && <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>Сфера жизни:</b> {parts.aspectText}</p>}
               </div>
             )}
-            <div onClick={() => setSubOpen(isOpen ? null : si)} style={{ fontSize: 10.5, color: "#5c5686", cursor: "pointer", marginBottom: 2 }}>
-              {isOpen ? "▾ скрыть пратьянтардашу (3-й уровень)" : "▸ раскрыть пратьянтардашу (3-й уровень)"}
+            <div onClick={() => setSubOpen(isOpen ? null : si)} style={{
+              fontSize: 11, color: "#e8c46b", cursor: "pointer", marginBottom: 3, fontWeight: 600,
+              display: "flex", alignItems: "center", gap: 4,
+            }}>
+              {isOpen ? "▾" : "▸"} под-периоды {PLANET_NAMES[code]} (пратьянтардаша, свои даты внутри этой антардаши)
             </div>
             <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} />
           </div>
@@ -1252,7 +1255,7 @@ export default function JyotishApp() {
       {tab === "dasha" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
           <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12 }}>
-            Вимшоттари даша — все 3 уровня: махадаша → антардаша → пратьянтардаша. Клик по строке махадаши раскрывает антардаши; клик по строке «раскрыть пратьянтардашу» под каждой антардашей — раскрывает третий, самый детальный уровень. На каждом уровне — развёрнутое пояснение обывательским языком: сильные стороны, на что обратить внимание и к какой сфере жизни это относится.
+            Вимшоттари даша — все 3 уровня: махадаша → антардаша → пратьянтардаша, у каждого своя дата начала и конца. Клик по строке махадаши раскрывает её антардаши с разбором; клик по строке «под-периоды» под нужной антардашей — раскрывает её собственные пратьянтардаши (свои даты внутри родительского периода), каждая — с коротким «+» (сильная сторона) и «−» (на что обратить внимание).
           </div>
           {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
           {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
