@@ -23,6 +23,12 @@ import {
   DOMAIN_META,
   CANDIDATE_CITIES,
   relocationScore,
+  STRONG_HOUSES,
+  DIFFICULT_HOUSES,
+  NATURAL_BENEFICS,
+  NATURAL_MILD_BENEFICS,
+  NATURAL_MALEFICS,
+  PLANET_FOCUS_ADVICE,
 } from "./astroData";
 
 /* =========================================================
@@ -184,11 +190,33 @@ function relocatedBirthFields(person, destLat, destLon, destTzone) {
   };
 }
 
-function dashaComboText(mahaCode, antarCode) {
+// В каком натальном доме стоит планета и какие сферы жизни (из DOMAIN_META) это затрагивает —
+// связывает периоды даши с уже посчитанными домами, а не только с классическими дружбами планет.
+function lifeAspectHouseDomain(code, details) {
+  const house = details?.[code]?.house;
+  if (!house) return null;
+  const domains = Object.entries(DOMAIN_META)
+    .filter(([, dm]) => dm.houses.includes(house))
+    .map(([, dm]) => dm.title);
+  return { house, domains };
+}
+
+function dashaComboText(mahaCode, antarCode, details) {
   const a = DASHA_TEXTS[antarCode];
   if (!a) return "";
   const rel = relation(mahaCode, antarCode);
-  return `${a.strengths} (${RELATION_LABEL[rel]} по отношению к махадаше ${PLANET_NAMES[mahaCode]})`;
+  let text = `${a.strengths} (${RELATION_LABEL[rel]} по отношению к махадаше ${PLANET_NAMES[mahaCode]})`;
+  const aspect = lifeAspectHouseDomain(antarCode, details);
+  if (aspect) {
+    text += ` Натально эта планета в ${aspect.house} доме${aspect.domains.length ? ` — задействует сферы «${aspect.domains.join("», «")}»` : ""}.`;
+  }
+  return text;
+}
+
+function pratyantarAspectText(code, details) {
+  const aspect = lifeAspectHouseDomain(code, details);
+  if (!aspect) return "";
+  return aspect.domains.length ? `дом ${aspect.house}, сфера «${aspect.domains.join("», «")}»` : `дом ${aspect.house}`;
 }
 
 function domainOccupantCount(details, houses) {
@@ -433,7 +461,7 @@ function PlanetTable({ details }) {
    UI: даша (маха → антар → пратьянтар)
    ========================================================= */
 
-function PratyantarList({ birth, mdEn, adEn, open }) {
+function PratyantarList({ birth, mdEn, adEn, open, details }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
 
   useEffect(() => {
@@ -469,10 +497,14 @@ function PratyantarList({ birth, mdEn, adEn, open }) {
         const active = start && end && now >= start && now < end;
         const code = PLANET_EN_TO_CODE[s.planet] || s.planet;
         const rel = relation(adCode, code);
+        const aspectStr = pratyantarAspectText(code, details);
         return (
-          <div key={si} style={{ fontSize: 11, color: active ? "#e8c46b" : "#766fa0", display: "flex", justifyContent: "space-between" }}>
-            <span>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet} · {RELATION_LABEL[rel]}</span>
-            <span>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
+          <div key={si} style={{ fontSize: 11, color: active ? "#e8c46b" : "#766fa0", padding: "1px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet} · {RELATION_LABEL[rel]}</span>
+              <span>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
+            </div>
+            {aspectStr && <div style={{ color: "#5c5686", fontSize: 10 }}>{aspectStr}{PLANET_CORE[code] ? ` · ${PLANET_CORE[code]}` : ""}</div>}
           </div>
         );
       })}
@@ -480,7 +512,7 @@ function PratyantarList({ birth, mdEn, adEn, open }) {
   );
 }
 
-function AntardashaList({ birth, mahaCode, majorPlanetEn, open }) {
+function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [subOpen, setSubOpen] = useState(null);
 
@@ -526,9 +558,9 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open }) {
               <span>{start?.toISOString().slice(0, 10)} — {end?.toISOString().slice(0, 10)}</span>
             </div>
             <div style={{ fontSize: 11, color: "#9089c9", lineHeight: 1.5, marginBottom: 2 }}>
-              {dashaComboText(mahaCode, code)}
+              {dashaComboText(mahaCode, code, details)}
             </div>
-            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} />
+            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} />
           </div>
         );
       })}
@@ -536,7 +568,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open }) {
   );
 }
 
-function DashaTimeline({ birth, periods }) {
+function DashaTimeline({ birth, periods, details }) {
   const now = new Date();
   const [openIdx, setOpenIdx] = useState(null);
 
@@ -582,9 +614,18 @@ function DashaTimeline({ birth, periods }) {
                     <p><b style={{ color: "#e8c46b" }}>Стиль коммуникации:</b> {text.comm}</p>
                   </>
                 )}
+                {(() => {
+                  const aspect = lifeAspectHouseDomain(p.lord, details);
+                  if (!aspect) return null;
+                  return (
+                    <p>
+                      <b style={{ color: "#e8c46b" }}>Сфера жизни:</b> управитель периода натально стоит в {aspect.house} доме ({HOUSE_MEANINGS[aspect.house]}){aspect.domains.length ? ` — сильнее всего это звучит в: ${aspect.domains.join(", ")}` : ""}.
+                    </p>
+                  );
+                })()}
                 <div style={{ marginTop: 10 }}>
                   <b style={{ color: "#9089c9", fontSize: 12 }}>Антардаши (кликните — раскроется ещё и пратьянтардаша):</b>
-                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} />
+                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} />
                 </div>
               </div>
             )}
@@ -598,6 +639,53 @@ function DashaTimeline({ birth, periods }) {
 /* =========================================================
    UI: дома и сферы жизни
    ========================================================= */
+
+// Плюсы/минусы по сфере: благотворные планеты и хорошо расположенный управитель — плюс;
+// трудные планеты в доме и управитель в дусттхане (6/8/12) — минус, с практической подсказкой,
+// что с этим делать. Эвристика поверх уже посчитанных домов, не замена консультации.
+function assessDomain(dm, rows) {
+  const pluses = [];
+  const minuses = [];
+  const watch = [];
+  const adviceCodes = [];
+
+  dm.houses.forEach((h) => {
+    const row = rows[h - 1];
+    if (!row.occupants.length) {
+      watch.push(`${h} дом (${HOUSE_MEANINGS[h]}) — прямых планет нет, вся тема держится на управителе.`);
+    }
+
+    row.occupants.forEach((c) => {
+      if (NATURAL_BENEFICS.includes(c) || NATURAL_MILD_BENEFICS.includes(c)) {
+        pluses.push(`${PLANET_NAMES[c]} в ${h} доме — ${PLANET_CORE[c]}, поддерживает эту сферу.`);
+      } else {
+        minuses.push(`${PLANET_NAMES[c]} в ${h} доме — тема требует сознательных усилий: ${PLANET_CORE[c]}.`);
+        adviceCodes.push(c);
+      }
+    });
+
+    if (row.lordHouse) {
+      if (STRONG_HOUSES.has(row.lordHouse)) {
+        pluses.push(`Управитель ${h} дома — ${PLANET_NAMES[row.lord]} — хорошо расположен, в ${row.lordHouse} доме (${HOUSE_MEANINGS[row.lordHouse]}).`);
+      } else if (DIFFICULT_HOUSES.has(row.lordHouse)) {
+        minuses.push(`Управитель ${h} дома — ${PLANET_NAMES[row.lord]} — в трудном ${row.lordHouse} доме (${HOUSE_MEANINGS[row.lordHouse]}), сфере не хватает опоры.`);
+        adviceCodes.push(row.lord);
+      }
+    }
+  });
+
+  const score = pluses.length - minuses.length;
+  const verdict = score > 0 ? "good" : score < 0 ? "watch" : "mixed";
+  const advice = [...new Set(adviceCodes)].slice(0, 3).map((c) => `${PLANET_NAMES[c]}: ${PLANET_FOCUS_ADVICE[c]}.`);
+
+  return { pluses, minuses, watch, advice, verdict };
+}
+
+const HOUSE_VERDICT_META = {
+  good: { label: "Сильная сфера", bg: "#1c3a2e", color: "#7fd99a" },
+  mixed: { label: "Смешанная картина", bg: "#3a3320", color: "#e8c46b" },
+  watch: { label: "Требует внимания", bg: "#3a2020", color: "#e88b8b" },
+};
 
 function HousesPanel({ details }) {
   if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
@@ -614,25 +702,51 @@ function HousesPanel({ details }) {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-        Дома считаются от Асцендента ({SIGNS[ascSignIdx]}). Для каждой сферы — ключевые дома, кто там стоит и где сейчас управитель дома.
+        Дома считаются от Асцендента ({SIGNS[ascSignIdx]}). По каждой сфере — плюсы, на что обратить внимание и что практически можно поправить.
       </div>
 
-      {Object.entries(DOMAIN_META).map(([key, dm]) => (
-        <div key={key} style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>{dm.title}</div>
-          {dm.houses.map((h) => {
-            const row = rows[h - 1];
-            return (
-              <p key={h} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 8 }}>
-                <b style={{ color: "#f1ede4" }}>{h} дом</b> ({HOUSE_MEANINGS[h]}): {row.occupants.length
-                  ? row.occupants.map((c) => `${PLANET_NAMES[c]} — ${PLANET_CORE[c]}`).join("; ")
-                  : "прямых планет нет — смотрите на управителя"}.
-                {" "}Управитель — {PLANET_NAMES[row.lord]}, сам находится в {row.lordHouse ?? "—"} доме{row.lordHouse ? ` (${HOUSE_MEANINGS[row.lordHouse]})` : ""}.
-              </p>
-            );
-          })}
-        </div>
-      ))}
+      {Object.entries(DOMAIN_META).map(([key, dm]) => {
+        const a = assessDomain(dm, rows);
+        const vm = HOUSE_VERDICT_META[a.verdict];
+        return (
+          <div key={key} style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+              <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{dm.title}</div>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: vm.bg, color: vm.color }}>{vm.label}</span>
+            </div>
+            <div style={{ fontSize: 12, color: "#8b84b8", marginBottom: 10 }}>
+              Ключевые дома: {dm.houses.map((h) => `${h} (${HOUSE_MEANINGS[h]})`).join(", ")}.
+            </div>
+
+            {a.pluses.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: "#7fd99a", fontWeight: 600, marginBottom: 4 }}>Плюсы</div>
+                {a.pluses.map((t, i) => (
+                  <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+                ))}
+              </div>
+            )}
+
+            {(a.minuses.length > 0 || a.watch.length > 0) && (
+              <div style={{ marginBottom: a.advice.length ? 10 : 0 }}>
+                <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 4 }}>На что обратить внимание</div>
+                {[...a.minuses, ...a.watch].map((t, i) => (
+                  <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+                ))}
+              </div>
+            )}
+
+            {a.advice.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: "#9db8e8", fontWeight: 600, marginBottom: 4 }}>Что можно поправить и как</div>
+                {a.advice.map((t, i) => (
+                  <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f3f5c" }}>{t}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>Все 12 домов</div>
@@ -1015,7 +1129,7 @@ export default function JyotishApp() {
           </div>
           {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
           {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
-          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} />}
+          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} />}
         </div>
       )}
 

@@ -119,35 +119,53 @@ export const CANDIDATE_CITIES = [
   { name: "Токио", country: "Япония", lat: 35.6762, lon: 139.6503, tz: 9 },
 ];
 
+// Общая классификация планет и домов — используется и для подбора релокации,
+// и для оценки «плюсов/минусов» по сферам жизни (см. HousesPanel).
+// Кендры/трикона (1,4,5,7,9,10) — сильные, «видные» дома; дусттхана (6,8,12) — трудные,
+// там благотворным планетам менее комфортно, а трудным — как раз привычнее.
+export const STRONG_HOUSES = new Set([1, 4, 5, 7, 9, 10]);
+export const DIFFICULT_HOUSES = new Set([6, 8, 12]);
+export const NATURAL_BENEFICS = ["Ju", "Ve"];
+export const NATURAL_MILD_BENEFICS = ["Mo", "Me"];
+export const NATURAL_MALEFICS = ["Su", "Ma", "Sa", "Ra", "Ke"];
+
+// Короткая практическая рекомендация «что делать» — не классические ритуальные
+// средства (камни/мантры), а поведенческий фокус, отталкивающийся от сути планеты.
+export const PLANET_FOCUS_ADVICE = {
+  Su: "дать себе больше самостоятельности и видимости в этой сфере, не растворяться в чужих сценариях",
+  Mo: "не принимать решения на эмоциях — сначала стабилизировать рутину, потом действовать",
+  Ma: "направлять напор в конкретные действия, а не в конфликты и спешку",
+  Me: "фиксировать договорённости письменно, не полагаться на устные обещания",
+  Ju: "перепроверять расчёты и сроки, не переоценивать свои возможности",
+  Ve: "не затягивать сложные решения ради комфорта, обозначать границы",
+  Sa: "закладывать больше времени и терпения, не форсировать результат",
+  Ra: "перепроверять факты и людей, не поддаваться эффекту «всё и сразу»",
+  Ke: "не пускать сферу на самотёк из-за отстранённости — держать минимальный контроль",
+};
+
 // Эвристическая «сила» карты в конкретной точке: благоприятные планеты в сильных домах
 // (кендры/трикона 1,4,5,7,9,10) — плюс; трудные планеты там же — минус; трудные планеты,
 // убранные в спокойные дома (6,8,12), — тоже плюс (им там комфортнее). Не классическая
 // методика подбора места, а прикидка поверх уже посчитанных домов.
-const RELOC_GOOD_HOUSES = new Set([1, 4, 5, 7, 9, 10]);
-const RELOC_HARD_HOUSES = new Set([6, 8, 12]);
-const RELOC_BENEFIC = ["Ju", "Ve"];
-const RELOC_MILD_BENEFIC = ["Mo", "Me"];
-const RELOC_MALEFIC = ["Su", "Ma", "Sa", "Ra", "Ke"];
-
 export function relocationScore(details, activeMahaLord) {
   let score = 0;
-  for (const code of [...RELOC_BENEFIC, ...RELOC_MILD_BENEFIC, ...RELOC_MALEFIC]) {
+  for (const code of [...NATURAL_BENEFICS, ...NATURAL_MILD_BENEFICS, ...NATURAL_MALEFICS]) {
     const house = details?.[code]?.house;
     if (!house) continue;
-    if (RELOC_BENEFIC.includes(code)) {
-      if (RELOC_GOOD_HOUSES.has(house)) score += 3;
-      else if (RELOC_HARD_HOUSES.has(house)) score -= 1;
-    } else if (RELOC_MILD_BENEFIC.includes(code)) {
-      if (RELOC_GOOD_HOUSES.has(house)) score += 2;
-    } else if (RELOC_MALEFIC.includes(code)) {
-      if (RELOC_HARD_HOUSES.has(house)) score += 1;
+    if (NATURAL_BENEFICS.includes(code)) {
+      if (STRONG_HOUSES.has(house)) score += 3;
+      else if (DIFFICULT_HOUSES.has(house)) score -= 1;
+    } else if (NATURAL_MILD_BENEFICS.includes(code)) {
+      if (STRONG_HOUSES.has(house)) score += 2;
+    } else if (NATURAL_MALEFICS.includes(code)) {
+      if (DIFFICULT_HOUSES.has(house)) score += 1;
       else if (house === 1 || house === 7) score -= 2;
     }
   }
   const mahaHouse = activeMahaLord && details?.[activeMahaLord]?.house;
   if (mahaHouse) {
-    if (RELOC_GOOD_HOUSES.has(mahaHouse)) score += 4;
-    else if (RELOC_HARD_HOUSES.has(mahaHouse)) score -= 2;
+    if (STRONG_HOUSES.has(mahaHouse)) score += 4;
+    else if (DIFFICULT_HOUSES.has(mahaHouse)) score -= 2;
   }
   return score;
 }
