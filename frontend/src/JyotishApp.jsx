@@ -908,10 +908,34 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
 const defaultPerson1 = { name: "Профиль 1", gender: "male", date: "1994-06-15", time: "08:30", tz: 3, lat: 55.75, lon: 37.62 };
 const defaultPerson2 = { name: "Профиль 2", gender: "female", date: "1992-03-22", time: "14:10", tz: 3, lat: 55.75, lon: 37.62 };
 
+// Запоминаем последние введённые данные рождения в этом браузере, чтобы они не терялись
+// при обновлении страницы или между визитами (сервер их не хранит и не видит).
+function loadSavedPerson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return fallback;
+    return { ...fallback, ...parsed };
+  } catch {
+    return fallback;
+  }
+}
+function saveSavedPerson(key, person) {
+  try {
+    localStorage.setItem(key, JSON.stringify(person));
+  } catch {
+    // localStorage недоступен (приватный режим и т.п.) — просто не сохраняем
+  }
+}
+
 export default function JyotishApp() {
   const [tab, setTab] = useState("chart");
-  const [person1, setPerson1] = useState(defaultPerson1);
-  const [person2, setPerson2] = useState(defaultPerson2);
+  const [person1, setPerson1] = useState(() => loadSavedPerson("astro_person1", defaultPerson1));
+  const [person2, setPerson2] = useState(() => loadSavedPerson("astro_person2", defaultPerson2));
+
+  useEffect(() => { saveSavedPerson("astro_person1", person1); }, [person1]);
+  useEffect(() => { saveSavedPerson("astro_person2", person2); }, [person2]);
   const [matchKind, setMatchKind] = useState("marriage"); // marriage | business | friendship
 
   const chart1 = useBirthChart(person1);
@@ -948,7 +972,7 @@ export default function JyotishApp() {
   return (
     <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
-        <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>ДЖЙОТИШ</div>
+        <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>ВЕДИЧЕСКАЯ АСТРОЛОГИЯ</div>
         <div style={{ fontSize: 11, color: "#6f6798", marginTop: 2, fontFamily: "system-ui, sans-serif" }}>
           живые расчёты по данным рождения, сидерический зодиак
         </div>
