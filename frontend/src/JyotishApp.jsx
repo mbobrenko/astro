@@ -259,9 +259,41 @@ function pratyantarComboParts(antarCode, code, details) {
   return { plus, minus, aspectText, rel };
 }
 
-function domainOccupantCount(details, houses) {
-  if (!details) return 0;
-  return houses.reduce((sum, h) => sum + PLANET_ORDER.filter((c) => details[c]?.house === h).length, 0);
+// Строит те же 12 строк «дом → знак/хозяин/кто внутри», что использует вкладка «Дома и
+// сферы» — общий помощник, чтобы релокация оценивала сферы той же логикой, а не отдельной
+// несвязанной метрикой (иначе топ карточки вверху и разбор внизу могут выглядеть нестыкованно).
+function buildHouseRows(details) {
+  if (!details?.As) return null;
+  const ascSignIdx = details.As.sign ?? 0;
+  return Array.from({ length: 12 }, (_, i) => {
+    const houseNum = i + 1;
+    const signIdx = (ascSignIdx + i) % 12;
+    const lord = signLordOf(signIdx);
+    const occupants = PLANET_ORDER.filter((c) => details[c]?.house === houseNum);
+    return { houseNum, signIdx, lord, lordHouse: details[lord]?.house ?? null, occupants };
+  });
+}
+
+// Числовая «сила сферы» той же природы, что и плюсы/минусы в «Дома и сферы»: благотворная
+// планета в доме сферы — плюс, трудная — минус; хозяйка дома в сильной части карты — плюс,
+// в слабой — минус. Используется, чтобы сравнение «до/после релокации» было по тем же
+// правилам, что и общий рейтинг городов вверху панели.
+function domainScore(dm, rows) {
+  if (!rows) return 0;
+  let score = 0;
+  dm.houses.forEach((h) => {
+    const row = rows[h - 1];
+    row.occupants.forEach((c) => {
+      if (NATURAL_BENEFICS.includes(c)) score += 2;
+      else if (NATURAL_MILD_BENEFICS.includes(c)) score += 1;
+      else score -= 1;
+    });
+    if (row.lordHouse) {
+      if (STRONG_HOUSES.has(row.lordHouse)) score += 2;
+      else if (DIFFICULT_HOUSES.has(row.lordHouse)) score -= 2;
+    }
+  });
+  return score;
 }
 
 /* =========================================================
@@ -781,14 +813,7 @@ const HOUSE_VERDICT_META = {
 function HousesPanel({ details }) {
   if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
   const ascSignIdx = details.As.sign ?? 0;
-
-  const rows = Array.from({ length: 12 }, (_, i) => {
-    const houseNum = i + 1;
-    const signIdx = (ascSignIdx + i) % 12;
-    const lord = signLordOf(signIdx);
-    const occupants = PLANET_ORDER.filter((c) => details[c]?.house === houseNum);
-    return { houseNum, signIdx, lord, lordHouse: details[lord]?.house ?? null, occupants };
-  });
+  const rows = buildHouseRows(details);
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1141,20 +1166,27 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
             </p>
           )}
 
-          <div style={{ marginTop: 12 }}>
-            {Object.entries(DOMAIN_META).map(([key, dm]) => {
-              const before = domainOccupantCount(orig, dm.houses);
-              const after = domainOccupantCount(result.details, dm.houses);
-              const diff = after - before;
-              const verdict = diff > 0 ? "усиливается" : diff < 0 ? "ослабевает" : "без изменений";
-              const color = diff > 0 ? "#8fd19e" : diff < 0 ? "#e0b98b" : "#c9c4e8";
-              return (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", borderTop: "1px solid #2e2a5c" }}>
-                  <span style={{ color: "#f1ede4" }}>{dm.title}</span>
-                  <span style={{ color }}>{verdict} ({before} → {after})</span>
-                </div>
-              );
-            })}
+          <div style={{ fontSize: 11, color: "#6f6798", marginTop: 10, lineHeight: 1.5 }}>
+            Ниже — та же логика, что и в общем рейтинге городов выше (благоприятные планеты в сильных домах, трудные — в слабых). Общий балл в рейтинге учитывает ещё и то, в каком доме окажется управитель текущей махадаши — это большой отдельный фактор, не привязанный к одной конкретной сфере, поэтому у высокого места в рейтинге отдельные сферы ниже вполне могут выглядеть скромно или почти не меняться — это не ошибка.
+          </div>
+          <div style={{ marginTop: 8 }}>
+            {(() => {
+              const origRows = buildHouseRows(orig);
+              const afterRows = buildHouseRows(result.details);
+              return Object.entries(DOMAIN_META).map(([key, dm]) => {
+                const before = domainScore(dm, origRows);
+                const after = domainScore(dm, afterRows);
+                const diff = after - before;
+                const verdict = diff > 0 ? "выглядит сильнее" : diff < 0 ? "выглядит слабее" : "без изменений";
+                const color = diff > 0 ? "#8fd19e" : diff < 0 ? "#e0b98b" : "#c9c4e8";
+                return (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", borderTop: "1px solid #2e2a5c" }}>
+                    <span style={{ color: "#f1ede4" }}>{dm.title}</span>
+                    <span style={{ color }}>{verdict} ({before > 0 ? "+" : ""}{before} → {after > 0 ? "+" : ""}{after})</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       )}
