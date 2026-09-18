@@ -192,8 +192,10 @@ export const PLANET_FOCUS_ADVICE = {
 
 // Эвристическая «сила» карты в конкретной точке: благоприятные планеты в сильных домах
 // (кендры/трикона 1,4,5,7,9,10) — плюс; трудные планеты там же — минус; трудные планеты,
-// убранные в спокойные дома (6,8,12), — тоже плюс (им там комфортнее). Не классическая
-// методика подбора места, а прикидка поверх уже посчитанных домов.
+// убранные в спокойные дома (6,8,12), — тоже плюс (им там комфортнее). Плюс два отдельных
+// крупных фактора: дом управителя текущей махадаши и управитель самого Асцендента (Лагна-
+// лорд) — его благотворность и расположение. Не классическая методика подбора места,
+// а прикидка поверх уже посчитанных домов.
 export function relocationScore(details, activeMahaLord) {
   let score = 0;
   for (const code of [...NATURAL_BENEFICS, ...NATURAL_MILD_BENEFICS, ...NATURAL_MALEFICS]) {
@@ -214,5 +216,19 @@ export function relocationScore(details, activeMahaLord) {
     if (STRONG_HOUSES.has(mahaHouse)) score += 4;
     else if (DIFFICULT_HOUSES.has(mahaHouse)) score -= 2;
   }
+
+  // Управитель Асцендента (Лагна-лорд) — классически один из самых весомых факторов силы
+  // карты в целом: если он естественно благотворен и/или хорошо расположен, вся карта
+  // держится увереннее в этой точке; если он в трудном доме — наоборот, испытание.
+  if (details?.As?.sign != null) {
+    const ascLord = signLordOf(details.As.sign);
+    if (NATURAL_BENEFICS.includes(ascLord)) score += 2;
+    const ascLordHouse = details?.[ascLord]?.house;
+    if (ascLordHouse) {
+      if (STRONG_HOUSES.has(ascLordHouse)) score += 3;
+      else if (DIFFICULT_HOUSES.has(ascLordHouse)) score -= 2;
+    }
+  }
+
   return score;
 }
