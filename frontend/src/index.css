@@ -24,3 +24,18 @@ body {
 p {
   margin: 0;
 }
+
+img {
+  max-width: 100%;
+}
+
+@media (max-width: 520px) {
+  .app-root {
+    padding: 12px !important;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+}

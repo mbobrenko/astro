@@ -21,6 +21,8 @@ import {
   HOUSE_MEANINGS,
   PLANET_CORE,
   DOMAIN_META,
+  CANDIDATE_CITIES,
+  relocationScore,
 } from "./astroData";
 
 /* =========================================================
@@ -375,10 +377,10 @@ function BirthForm({ person, setPerson, label }) {
     <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
       <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>{label}</div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
         <div><span style={labelStyle}>Имя</span><input style={inputStyle} value={person.name} onChange={upd("name")} placeholder="Имя" /></div>
         <div>
-          <span style={labelStyle}>Пол (для синастрии)</span>
+          <span style={labelStyle}>Пол (для совместимости)</span>
           <select style={inputStyle} value={person.gender} onChange={upd("gender")}>
             <option value="male">Мужской</option>
             <option value="female">Женский</option>
@@ -390,7 +392,7 @@ function BirthForm({ person, setPerson, label }) {
 
       <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(person.date)} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+      <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <div><span style={labelStyle}>Широта</span><input style={inputStyle} type="number" step="0.01" value={person.lat} onChange={upd("lat")} /></div>
         <div><span style={labelStyle}>Долгота</span><input style={inputStyle} type="number" step="0.01" value={person.lon} onChange={upd("lon")} /></div>
         <div><span style={labelStyle}>Часовой пояс (UTC+)</span><input style={inputStyle} type="number" step="0.5" value={person.tz} onChange={upd("tz")} /></div>
@@ -402,7 +404,8 @@ function BirthForm({ person, setPerson, label }) {
 function PlanetTable({ details }) {
   if (!details) return null;
   return (
-    <table style={{ width: "100%", marginTop: 16, borderCollapse: "collapse", fontSize: 12 }}>
+    <div style={{ overflowX: "auto", marginTop: 16 }}>
+    <table style={{ width: "100%", minWidth: 420, borderCollapse: "collapse", fontSize: 12 }}>
       <thead><tr style={{ color: "#9089c9", textAlign: "left" }}>
         <th style={{ padding: 6 }}>Планета</th><th>Знак</th><th>Накшатра</th><th>Пада</th><th>Дом</th>
       </tr></thead>
@@ -422,6 +425,7 @@ function PlanetTable({ details }) {
         })}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -632,7 +636,8 @@ function HousesPanel({ details }) {
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>Все 12 домов</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 380, borderCollapse: "collapse", fontSize: 12 }}>
           <thead><tr style={{ color: "#9089c9", textAlign: "left" }}>
             <th style={{ padding: 6 }}>Дом</th><th>Знак</th><th>Управитель</th><th>Планеты внутри</th>
           </tr></thead>
@@ -647,6 +652,7 @@ function HousesPanel({ details }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -691,7 +697,7 @@ function MatchResult({ data }) {
         <div style={{ fontSize: 13, color: conclusion.status ? "#8fd19e" : "#e0b98b", marginTop: 6, lineHeight: 1.55 }}>{verdictRu}</div>
         {conclusion.report && (
           <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>
-            Комментарий источника (AstrologyAPI, на английском): «{conclusion.report}»
+            Комментарий (оригинал на английском): «{conclusion.report}»
           </div>
         )}
       </div>
@@ -758,6 +764,9 @@ function HeuristicMatch({ kind, items }) {
 function RelocationPanel({ person, originalChart, activeMahaLord }) {
   const [status, setStatus] = useState(null);
   const [result, setResult] = useState(null);
+  const [bestStatus, setBestStatus] = useState(null); // null | "loading" | "done"
+  const [bestProgress, setBestProgress] = useState(0);
+  const [bestResults, setBestResults] = useState(null);
 
   const handlePick = useCallback(async (cand) => {
     setStatus("loading");
@@ -774,16 +783,82 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
 
   const orig = originalChart?.details;
 
+  const findBestPlaces = useCallback(async () => {
+    if (!orig) return;
+    setBestStatus("loading");
+    setBestProgress(0);
+    setBestResults(null);
+    const found = [];
+    const queue = [...CANDIDATE_CITIES];
+    async function worker() {
+      while (queue.length) {
+        const city = queue.shift();
+        try {
+          const fields = relocatedBirthFields(person, city.lat, city.lon, city.tz);
+          const [planetsRes, astroRes] = await Promise.all([fetchPlanets(fields), fetchAstroDetails(fields)]);
+          const details = buildChartDetails(planetsRes, astroRes);
+          found.push({ city, details, score: relocationScore(details, activeMahaLord) });
+        } catch {
+          // город пропускаем, если не получилось посчитать
+        }
+        setBestProgress((p) => p + 1);
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+    found.sort((a, b) => b.score - a.score);
+    setBestResults(found.slice(0, 6));
+    setBestStatus("done");
+  }, [orig, person, activeMahaLord]);
+
+  const openCityResult = useCallback((r) => {
+    setResult({ label: `${r.city.name}, ${r.city.country}`, details: r.details });
+    setStatus("ready");
+  }, []);
+
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12, lineHeight: 1.6 }}>
-        Релокация пересчитывает Асцендент и дома для той же секунды рождения, но в другой точке Земли (планеты по знакам почти не меняются, а вот дома — заметно). Проверяем один город за раз — не автоподбор «лучшего места в мире», а конкретная проверка конкретной локации.
+        Релокация пересчитывает Асцендент и дома для той же секунды рождения, но в другой точке Земли (планеты по знакам почти не меняются, а вот дома — заметно). Ниже — подбор благоприятных мест по кураторскому списку городов, либо проверка конкретного города вручную.
       </div>
 
       {!orig && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>}
 
       {orig && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Наилучшие варианты релокации</div>
+          <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 12, lineHeight: 1.5 }}>
+            Прикидка по {CANDIDATE_CITIES.length} городам мира: где благоприятные планеты попадают в сильные дома (1,4,5,7,9,10), а трудные — в спокойные (6,8,12), и как это влияет на дом текущей махадаши. Эвристика поверх карты, не классическая методика подбора места — понравившийся вариант стоит дополнительно проверить вручную ниже.
+          </div>
+          <button onClick={findBestPlaces} disabled={bestStatus === "loading"} style={{
+            display: "block", margin: "0 auto", background: "#e8c46b", color: "#151233", border: "none",
+            borderRadius: 20, padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: bestStatus === "loading" ? "default" : "pointer",
+            opacity: bestStatus === "loading" ? 0.7 : 1,
+          }}>
+            {bestStatus === "loading" ? `Проверяю ${bestProgress} из ${CANDIDATE_CITIES.length}…` : "Подобрать лучшие места"}
+          </button>
+
+          {bestResults && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+              {bestResults.map((r, i) => (
+                <button key={r.city.name} onClick={() => openCityResult(r)} style={{
+                  textAlign: "left", background: "#211c47", border: "1px solid #332c66", borderRadius: 6,
+                  padding: "8px 12px", cursor: "pointer", display: "flex", justifyContent: "space-between",
+                  alignItems: "center", color: "#f1ede4", fontSize: 13,
+                }}>
+                  <span>{i + 1}. {r.city.name}, {r.city.country}</span>
+                  <span style={{ color: r.score > 0 ? "#8fd19e" : r.score < 0 ? "#e08b8b" : "#c9c4e8", fontWeight: 700 }}>
+                    {r.score > 0 ? "+" : ""}{r.score}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {orig && (
+        <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>Проверить свой город</div>
           <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(person.date)} />
         </div>
       )}
@@ -866,16 +941,16 @@ export default function JyotishApp() {
     { id: "chart", label: "Карта" },
     { id: "dasha", label: "Периоды жизни" },
     { id: "houses", label: "Дома и сферы" },
-    { id: "synastry", label: "Синастрия" },
+    { id: "synastry", label: "Совместимость" },
     { id: "relocation", label: "Релокация" },
   ];
 
   return (
-    <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
+    <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>ДЖЙОТИШ</div>
         <div style={{ fontSize: 11, color: "#6f6798", marginTop: 2, fontFamily: "system-ui, sans-serif" }}>
-          живые расчёты через AstrologyAPI (json.astrologyapi.com), сидерический зодиак
+          живые расчёты по данным рождения, сидерический зодиак
         </div>
       </div>
 
@@ -912,7 +987,7 @@ export default function JyotishApp() {
       {tab === "dasha" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
           <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12 }}>
-            Вимшоттари даша от AstrologyAPI: махадаша → антардаша → пратьянтардаша. Клик по строке раскрывает следующий уровень; серая строчка под антардашей — как она сочетается с темой махадаши.
+            Вимшоттари даша: махадаша → антардаша → пратьянтардаша. Клик по строке раскрывает следующий уровень; серая строчка под антардашей — как она сочетается с темой махадаши.
           </div>
           {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
           {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
@@ -935,7 +1010,7 @@ export default function JyotishApp() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 6, textAlign: "center" }}>{person1.name || "Профиль 1"}</div>
               {chart1.details ? <ChartWheel details={chart1.details} /> : <div style={{ fontSize: 12, color: "#8b84b8", textAlign: "center" }}>Загрузка…</div>}
@@ -968,7 +1043,7 @@ export default function JyotishApp() {
       )}
 
       <div style={{ marginTop: 20, fontSize: 10, color: "#4a4478", textAlign: "center", fontFamily: "system-ui, sans-serif" }}>
-        Данные планет, даша и совместимости — живые расчёты AstrologyAPI через локальный бэкенд-прокси (ключ хранится только на сервере). Дома/сферы, бизнес- и дружеская совместимость, релокация — авторская логика поверх этих данных, не отдельные эндпоинты API.
+        Данные планет, даша и совместимости — расчёты через защищённый серверный API (ключ хранится только на сервере, не передаётся в браузер). Дома/сферы, бизнес- и дружеская совместимость, релокация — авторская логика поверх этих данных.
       </div>
     </div>
   );

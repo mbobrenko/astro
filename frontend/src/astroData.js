@@ -97,3 +97,57 @@ export const DOMAIN_META = {
   fate: { title: "Судьба и предназначение", houses: [9, 10] },
   society: { title: "Общество и окружение", houses: [11, 7, 3] },
 };
+
+// Кураторский список городов для подбора благоприятной релокации.
+// Часовые пояса — стандартные (без учёта летнего времени), для быстрой прикидки достаточно.
+export const CANDIDATE_CITIES = [
+  { name: "Дубай", country: "ОАЭ", lat: 25.2048, lon: 55.2708, tz: 4 },
+  { name: "Бали (Денпасар)", country: "Индонезия", lat: -8.65, lon: 115.2167, tz: 8 },
+  { name: "Бангкок", country: "Таиланд", lat: 13.7563, lon: 100.5018, tz: 7 },
+  { name: "Сингапур", country: "Сингапур", lat: 1.3521, lon: 103.8198, tz: 8 },
+  { name: "Лиссабон", country: "Португалия", lat: 38.7223, lon: -9.1393, tz: 1 },
+  { name: "Барселона", country: "Испания", lat: 41.3874, lon: 2.1686, tz: 1 },
+  { name: "Стамбул", country: "Турция", lat: 41.0082, lon: 28.9784, tz: 3 },
+  { name: "Тбилиси", country: "Грузия", lat: 41.7151, lon: 44.8271, tz: 4 },
+  { name: "Ереван", country: "Армения", lat: 40.1792, lon: 44.4991, tz: 4 },
+  { name: "Лимассол", country: "Кипр", lat: 34.7071, lon: 33.0226, tz: 2 },
+  { name: "Нью-Йорк", country: "США", lat: 40.7128, lon: -74.006, tz: -5 },
+  { name: "Майами", country: "США", lat: 25.7617, lon: -80.1918, tz: -5 },
+  { name: "Мехико", country: "Мексика", lat: 19.4326, lon: -99.1332, tz: -6 },
+  { name: "Буэнос-Айрес", country: "Аргентина", lat: -34.6037, lon: -58.3816, tz: -3 },
+  { name: "Кейптаун", country: "ЮАР", lat: -33.9249, lon: 18.4241, tz: 2 },
+  { name: "Токио", country: "Япония", lat: 35.6762, lon: 139.6503, tz: 9 },
+];
+
+// Эвристическая «сила» карты в конкретной точке: благоприятные планеты в сильных домах
+// (кендры/трикона 1,4,5,7,9,10) — плюс; трудные планеты там же — минус; трудные планеты,
+// убранные в спокойные дома (6,8,12), — тоже плюс (им там комфортнее). Не классическая
+// методика подбора места, а прикидка поверх уже посчитанных домов.
+const RELOC_GOOD_HOUSES = new Set([1, 4, 5, 7, 9, 10]);
+const RELOC_HARD_HOUSES = new Set([6, 8, 12]);
+const RELOC_BENEFIC = ["Ju", "Ve"];
+const RELOC_MILD_BENEFIC = ["Mo", "Me"];
+const RELOC_MALEFIC = ["Su", "Ma", "Sa", "Ra", "Ke"];
+
+export function relocationScore(details, activeMahaLord) {
+  let score = 0;
+  for (const code of [...RELOC_BENEFIC, ...RELOC_MILD_BENEFIC, ...RELOC_MALEFIC]) {
+    const house = details?.[code]?.house;
+    if (!house) continue;
+    if (RELOC_BENEFIC.includes(code)) {
+      if (RELOC_GOOD_HOUSES.has(house)) score += 3;
+      else if (RELOC_HARD_HOUSES.has(house)) score -= 1;
+    } else if (RELOC_MILD_BENEFIC.includes(code)) {
+      if (RELOC_GOOD_HOUSES.has(house)) score += 2;
+    } else if (RELOC_MALEFIC.includes(code)) {
+      if (RELOC_HARD_HOUSES.has(house)) score += 1;
+      else if (house === 1 || house === 7) score -= 2;
+    }
+  }
+  const mahaHouse = activeMahaLord && details?.[activeMahaLord]?.house;
+  if (mahaHouse) {
+    if (RELOC_GOOD_HOUSES.has(mahaHouse)) score += 4;
+    else if (RELOC_HARD_HOUSES.has(mahaHouse)) score -= 2;
+  }
+  return score;
+}
