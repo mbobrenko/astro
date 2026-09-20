@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   fetchPlanets,
-  fetchAstroDetails,
   fetchMajorDasha,
   fetchSubDasha,
   fetchSubSubDasha,
@@ -167,9 +166,28 @@ function birthDateForApi(dateStr) {
   return `${mm}-${dd}-${yyyy}`;
 }
 
+// Ответ /planets уже содержит Асцендент отдельной записью (name: "Ascendant", со знаком,
+// накшатрой и домом=1) — отдельный вызов astro_details ради одного только Асцендента не
+// нужен и только тратит лишние кредиты API. astroDetails оставлен вторым (необязательным)
+// параметром как запасной вариант на случай, если однажды в /planets Асцендент не придёт.
 function buildChartDetails(planetsArr, astroDetails) {
   const details = {};
   (planetsArr || []).forEach((p) => {
+    if (p.name === "Ascendant") {
+      const sign = mapSign(p.sign);
+      const nak = mapNakshatra(p.nakshatra);
+      details.As = {
+        lon: p.normDegree ?? p.fullDegree ?? null,
+        sign: sign.idx ?? 0,
+        signName: sign.ru,
+        nak: nak.idx,
+        nakName: nak.ru,
+        pada: p.nakshatra_pad ?? "—",
+        house: p.house ?? 1,
+        retro: false,
+      };
+      return;
+    }
     const code = PLANET_EN_TO_CODE[p.name];
     if (!code) return;
     const sign = mapSign(p.sign);
@@ -185,9 +203,9 @@ function buildChartDetails(planetsArr, astroDetails) {
       retro: p.isRetro === "true" || p.isRetro === true,
     };
   });
-  if (astroDetails?.ascendant) {
+  if (!details.As && astroDetails?.ascendant) {
     const sign = mapSign(astroDetails.ascendant);
-    details.As = { lon: null, sign: sign.idx ?? 0, signName: sign.ru, nak: null, nakName: "—", pada: "—", house: null, retro: false };
+    details.As = { lon: null, sign: sign.idx ?? 0, signName: sign.ru, nak: null, nakName: "—", pada: "—", house: 1, retro: false };
   }
   return details;
 }
@@ -311,9 +329,9 @@ function useBirthChart(person) {
     const t = setTimeout(async () => {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const [planetsRes, astroRes] = await Promise.all([fetchPlanets(birth), fetchAstroDetails(birth)]);
+        const planetsRes = await fetchPlanets(birth);
         if (cancelled) return;
-        setState({ loading: false, error: null, details: buildChartDetails(planetsRes, astroRes) });
+        setState({ loading: false, error: null, details: buildChartDetails(planetsRes) });
       } catch (e) {
         if (cancelled) return;
         setState({ loading: false, error: e.message || "Не удалось получить данные", details: null });
@@ -1049,8 +1067,8 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     setStatus("loading");
     try {
       const fields = relocatedBirthFields(person, Number(cand.latitude), Number(cand.longitude), cand.tz);
-      const [planetsRes, astroRes] = await Promise.all([fetchPlanets(fields), fetchAstroDetails(fields)]);
-      const details = buildChartDetails(planetsRes, astroRes);
+      const planetsRes = await fetchPlanets(fields);
+      const details = buildChartDetails(planetsRes);
       setResult({ label: `${cand.place_name}${cand.country_code ? ", " + cand.country_code : ""}`, details });
       setStatus("ready");
     } catch (e) {
@@ -1072,8 +1090,8 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
         const city = queue.shift();
         try {
           const fields = relocatedBirthFields(person, city.lat, city.lon, city.tz);
-          const [planetsRes, astroRes] = await Promise.all([fetchPlanets(fields), fetchAstroDetails(fields)]);
-          const details = buildChartDetails(planetsRes, astroRes);
+          const planetsRes = await fetchPlanets(fields);
+          const details = buildChartDetails(planetsRes);
           found.push({ city, details, score: relocationScore(details, activeMahaLord) });
         } catch {
           // город пропускаем, если не получилось посчитать
