@@ -329,6 +329,30 @@ function ymGoal(name, params) {
   }
 }
 
+/* Мягкий пейволл: пока нет приёма платежей — CTA ведёт на контакт для ручной выдачи доступа / консультации.
+   Когда появится реальная подписка, здесь же поменять ссылку на страницу оформления. */
+const PREMIUM_CONTACT_URL = "mailto:m.bobrenko@gmail.com?subject=" + encodeURIComponent("Хочу открыть полную версию");
+
+function PaywallTeaser({ title, text, goalName }) {
+  return (
+    <div style={{
+      marginTop: 10, padding: "12px 14px", borderRadius: 8,
+      background: "linear-gradient(135deg, #241c52, #1c1846)", border: "1px dashed #4a4088",
+    }}>
+      <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 4 }}>🔒 {title}</div>
+      <div style={{ fontSize: 11.5, color: "#c9c4e8", lineHeight: 1.5, marginBottom: 8 }}>{text}</div>
+      <a
+        href={PREMIUM_CONTACT_URL}
+        onClick={() => ymGoal(goalName)}
+        style={{
+          display: "inline-block", fontSize: 12, fontWeight: 600, color: "#151233", background: "#e8c46b",
+          borderRadius: 16, padding: "6px 14px", textDecoration: "none",
+        }}
+      >Открыть полностью</a>
+    </div>
+  );
+}
+
 function useBirthChart(person, goalName) {
   const [state, setState] = useState({ loading: false, error: null, details: null });
   const key = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}`;
@@ -563,11 +587,11 @@ function PlanetTable({ details }) {
    UI: даша (маха → антар → пратьянтар)
    ========================================================= */
 
-function PratyantarList({ birth, mdEn, adEn, open, details }) {
+function PratyantarList({ birth, mdEn, adEn, open, details, locked }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
 
   useEffect(() => {
-    if (!open || state.subs || state.loading) return;
+    if (!open || locked || state.subs || state.loading) return;
     let cancelled = false;
     (async () => {
       setState((s) => ({ ...s, loading: true, error: null }));
@@ -582,9 +606,18 @@ function PratyantarList({ birth, mdEn, adEn, open, details }) {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, locked]);
 
   if (!open) return null;
+  if (locked) {
+    return (
+      <PaywallTeaser
+        title="Пратьянтардаша — под-периоды"
+        text="Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — в полной версии."
+        goalName="paywall_pratyantar_hit"
+      />
+    );
+  }
   if (state.loading) return <div style={{ fontSize: 11, color: "#8b84b8" }}>Загрузка пратьянтардаш…</div>;
   if (state.error) return <div style={{ fontSize: 11, color: "#e08b8b" }}>Ошибка: {state.error}</div>;
   if (!state.subs) return null;
@@ -683,7 +716,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
             }}>
               {isOpen ? "▾" : "▸"} под-периоды {PLANET_NAMES[code]} (пратьянтардаша, свои даты внутри этой антардаши)
             </div>
-            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} />
+            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} />
           </div>
         );
       })}
@@ -977,11 +1010,11 @@ function MatchResult({ data }) {
         {weakKoots.length === 0 ? (
           <p style={{ fontSize: 12, color: "#8fd19e", lineHeight: 1.55 }}>Слабых факторов не выявлено — все составляющие выше половины своего максимума.</p>
         ) : (
-          weakKoots.map(({ key, k }) => (
-            <p key={key} style={{ fontSize: 12, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 5, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>
-              <b style={{ color: "#f1ede4" }}>{KOOT_LABELS[key] || key}</b> ({k.received_points}/{k.total_points}) — {KOOT_WATCH_MEANING[key]}
-            </p>
-          ))
+          <PaywallTeaser
+            title={`Найдено слабых факторов: ${weakKoots.length}`}
+            text="Что именно означает каждый слабый фактор и на что обратить внимание в паре — в полной версии."
+            goalName="paywall_koots_hit"
+          />
         )}
       </div>
     </div>
@@ -1093,6 +1126,11 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
 
   const findBestPlaces = useCallback(async () => {
     if (!orig) return;
+    if (region === "all") {
+      ymGoal("paywall_relocation_hit");
+      setBestStatus("locked");
+      return;
+    }
     ymGoal("relocation_scan_started", { region, cities: poolCities.length });
     setBestStatus("loading");
     setBestProgress(0);
@@ -1155,6 +1193,14 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
           }}>
             {bestStatus === "loading" ? `Проверяю ${bestProgress} из ${poolCities.length}…` : "Подобрать лучшие места"}
           </button>
+
+          {bestStatus === "locked" && (
+            <PaywallTeaser
+              title="Подбор по всему миру (42 города)"
+              text="Полный мировой скан — в полной версии. Бесплатно доступен подбор в пределах одной части света (выберите её в списке выше) или ручная проверка конкретного города ниже."
+              goalName="paywall_relocation_shown"
+            />
+          )}
 
           {bestResults && (
             <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
