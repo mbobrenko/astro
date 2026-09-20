@@ -1407,10 +1407,6 @@ export default function JyotishApp() {
       {tab === "relocation" && (
         <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} />
       )}
-
-      <div style={{ marginTop: 20, fontSize: 10, color: "#4a4478", textAlign: "center", fontFamily: "system-ui, sans-serif" }}>
-        Данные планет, даша и совместимости — расчёты через защищённый собственный сервер (ключ доступа хранится только там, в браузер не передаётся). Дома/сферы, бизнес- и дружеская совместимость, релокация — авторская логика поверх этих данных.
-      </div>
     </div>
   );
 }
