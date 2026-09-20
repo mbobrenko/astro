@@ -318,7 +318,18 @@ function domainScore(dm, rows) {
    ДАННЫЕ С СЕРВЕРА: хуки
    ========================================================= */
 
-function useBirthChart(person) {
+/* Яндекс.Метрика: цели (безопасный вызов — если счётчик не загрузился, просто ничего не делает) */
+function ymGoal(name, params) {
+  try {
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(112840604, "reachGoal", name, params);
+    }
+  } catch {
+    // трекинг не должен ломать приложение
+  }
+}
+
+function useBirthChart(person, goalName) {
   const [state, setState] = useState({ loading: false, error: null, details: null });
   const key = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}`;
 
@@ -332,6 +343,7 @@ function useBirthChart(person) {
         const planetsRes = await fetchPlanets(birth);
         if (cancelled) return;
         setState({ loading: false, error: null, details: buildChartDetails(planetsRes) });
+        if (goalName) ymGoal(goalName);
       } catch (e) {
         if (cancelled) return;
         setState({ loading: false, error: e.message || "Не удалось получить данные", details: null });
@@ -1071,6 +1083,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
       const details = buildChartDetails(planetsRes);
       setResult({ label: `${cand.place_name}${cand.country_code ? ", " + cand.country_code : ""}`, details });
       setStatus("ready");
+      ymGoal("relocation_city_checked");
     } catch (e) {
       setStatus("error");
     }
@@ -1080,6 +1093,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
 
   const findBestPlaces = useCallback(async () => {
     if (!orig) return;
+    ymGoal("relocation_scan_started", { region, cities: poolCities.length });
     setBestStatus("loading");
     setBestProgress(0);
     setBestResults(null);
@@ -1103,6 +1117,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     found.sort((a, b) => b.score - a.score);
     setBestResults(found.slice(0, 8));
     setBestStatus("done");
+    ymGoal("relocation_scan_completed", { region, found: found.length });
   }, [orig, person, activeMahaLord, poolCities]);
 
   const openCityResult = useCallback((r) => {
@@ -1264,8 +1279,8 @@ export default function JyotishApp() {
   useEffect(() => { saveSavedPerson("astro_person2", person2); }, [person2]);
   const [matchKind, setMatchKind] = useState("marriage"); // marriage | business | friendship
 
-  const chart1 = useBirthChart(person1);
-  const chart2 = useBirthChart(person2);
+  const chart1 = useBirthChart(person1, "chart_calculated");
+  const chart2 = useBirthChart(person2, "partner_chart_calculated");
   const dasha1 = useMajorDasha(person1);
 
   const now = new Date();
@@ -1280,6 +1295,7 @@ export default function JyotishApp() {
       const female = person1.gender === "female" ? person1 : person2;
       const data = await fetchMatchAshtakoot(splitBirthForApi(male), splitBirthForApi(female));
       setMatchState({ loading: false, error: null, data });
+      ymGoal("compat_marriage_calculated");
     } catch (e) {
       setMatchState({ loading: false, error: e.message || "Не удалось рассчитать совместимость", data: null });
     }
@@ -1306,7 +1322,7 @@ export default function JyotishApp() {
 
       <div style={{ display: "flex", gap: 6, marginBottom: 18, justifyContent: "center", flexWrap: "wrap", fontFamily: "system-ui, sans-serif" }}>
         {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} onClick={() => { setTab(t.id); ymGoal(`tab_${t.id}`); }} style={{
             background: tab === t.id ? "#e8c46b" : "#1c1846", color: tab === t.id ? "#151233" : "#c9c4e8",
             border: "none", borderRadius: 20, padding: "7px 16px", fontSize: 13, cursor: "pointer", fontWeight: 600,
           }}>{t.label}</button>
@@ -1353,7 +1369,7 @@ export default function JyotishApp() {
 
           <div style={{ display: "flex", gap: 6, marginBottom: 16, justifyContent: "center" }}>
             {[["marriage", "Брак"], ["business", "Бизнес-партнёрство"], ["friendship", "Дружба"]].map(([id, lbl]) => (
-              <button key={id} onClick={() => setMatchKind(id)} style={{
+              <button key={id} onClick={() => { setMatchKind(id); if (id !== "marriage") ymGoal(`compat_${id}_viewed`); }} style={{
                 background: matchKind === id ? "#332c66" : "#1c1846", color: matchKind === id ? "#f1ede4" : "#8b84b8",
                 border: "1px solid #332c66", borderRadius: 16, padding: "6px 14px", fontSize: 12, cursor: "pointer",
               }}>{lbl}</button>
