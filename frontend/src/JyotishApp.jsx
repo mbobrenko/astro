@@ -329,6 +329,47 @@ function ymGoal(name, params) {
   }
 }
 
+/* Честное сравнение бесплатного и полного доступа — без цены, её ещё нет. */
+function PricingInfo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ maxWidth: 640, margin: "0 auto 18px", fontFamily: "system-ui, sans-serif" }}>
+      <div
+        onClick={() => { const next = !open; setOpen(next); if (next) ymGoal("pricing_info_opened"); }}
+        style={{ textAlign: "center", fontSize: 11.5, color: "#8b84b8", cursor: "pointer", userSelect: "none" }}
+      >
+        {open ? "▾" : "▸"} Что входит бесплатно / в полной версии
+      </div>
+      {open && (
+        <div style={{
+          marginTop: 8, background: "#1c1846", border: "1px solid #332c66", borderRadius: 10,
+          padding: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, fontSize: 12, lineHeight: 1.55,
+        }}>
+          <div>
+            <div style={{ color: "#8fd19e", fontWeight: 600, marginBottom: 6 }}>Бесплатно</div>
+            <ul style={{ margin: 0, paddingLeft: 16, color: "#c9c4e8" }}>
+              <li>Полная карта, дома и сферы жизни</li>
+              <li>Даша: махадаша и антардаша целиком</li>
+              <li>Пратьянтардаша — для периода, активного сейчас</li>
+              <li>Подбор лучших мест по релокации (1 раз для одних данных рождения) + разбор одного выбранного города</li>
+              <li>Совместимость: общий балл и вердикт</li>
+            </ul>
+          </div>
+          <div>
+            <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 6 }}>Полная версия (скоро)</div>
+            <ul style={{ margin: 0, paddingLeft: 16, color: "#c9c4e8" }}>
+              <li>Пратьянтардаша для всех периодов, не только текущего</li>
+              <li>Разбор любого числа городов в релокации, пересчёт для других данных рождения</li>
+              <li>Расшифровка слабых коотов совместимости — что именно значит каждый фактор</li>
+            </ul>
+            <div style={{ fontSize: 10.5, color: "#6f6798", marginTop: 6, fontStyle: "italic" }}>Цена и способ оплаты — уточняются.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* Мягкий пейволл: пока без ссылки на оплату/контакт — просто показываем, что дальше есть платная часть,
    и считаем, сколько раз на неё реально натыкаются (goalName шлётся один раз при показе тизера). */
 function PaywallTeaser({ title, text, goalName }) {
@@ -1101,14 +1142,21 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
   const [bestResults, setBestResults] = useState(null);
   const [region, setRegion] = useState("all");
   const [unlockedCity, setUnlockedCity] = useState(null); // ярлык единственного города, открытого бесплатно
+  const [scanCache, setScanCache] = useState(null); // { key, results } — последний бесплатный подбор
 
   const poolCities = region === "all" ? CANDIDATE_CITIES : CANDIDATE_CITIES.filter((c) => c.region === region);
+  const scanKey = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}|${region}`;
 
   const handlePick = useCallback(async (cand) => {
     const label = `${cand.place_name}${cand.country_code ? ", " + cand.country_code : ""}`;
     if (unlockedCity && unlockedCity !== label) {
       setResult({ label, details: null });
       setStatus("locked");
+      return;
+    }
+    if (unlockedCity && unlockedCity === label) {
+      // тот же город, что уже открыт бесплатно — просто показываем, без нового запроса к API
+      setStatus("ready");
       return;
     }
     setStatus("loading");
@@ -1129,6 +1177,18 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
 
   const findBestPlaces = useCallback(async () => {
     if (!orig) return;
+    if (scanCache && scanCache.key === scanKey) {
+      // те же данные рождения и та же часть света — уже считали, показываем без новых запросов к API
+      setBestResults(scanCache.results);
+      setBestStatus("done");
+      ymGoal("relocation_scan_cached", { region });
+      return;
+    }
+    if (scanCache && scanCache.key !== scanKey) {
+      // другие данные рождения или другая часть света — это уже новый платный запрос
+      setBestStatus("locked_scan");
+      return;
+    }
     ymGoal("relocation_scan_started", { region, cities: poolCities.length });
     setBestStatus("loading");
     setBestProgress(0);
@@ -1151,10 +1211,12 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     }
     await Promise.all([worker(), worker(), worker()]);
     found.sort((a, b) => b.score - a.score);
-    setBestResults(found.slice(0, 8));
+    const top = found.slice(0, 8);
+    setBestResults(top);
     setBestStatus("done");
+    setScanCache({ key: scanKey, results: top });
     ymGoal("relocation_scan_completed", { region, found: found.length });
-  }, [orig, person, activeMahaLord, poolCities]);
+  }, [orig, person, activeMahaLord, poolCities, region, scanKey, scanCache]);
 
   const openCityResult = useCallback((r) => {
     const label = `${r.city.name}, ${r.city.country}`;
@@ -1198,6 +1260,14 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
           }}>
             {bestStatus === "loading" ? `Проверяю ${bestProgress} из ${poolCities.length}…` : "Подобрать лучшие места"}
           </button>
+
+          {bestStatus === "locked_scan" && (
+            <PaywallTeaser
+              title="Подбор уже использован бесплатно"
+              text="Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Чтобы пересчитать для других данных рождения или другой части света — полная версия."
+              goalName="paywall_relocation_scan_hit"
+            />
+          )}
 
           {bestResults && (
             <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1382,6 +1452,8 @@ export default function JyotishApp() {
           }}>{t.label}</button>
         ))}
       </div>
+
+      <PricingInfo />
 
       {tab === "chart" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
