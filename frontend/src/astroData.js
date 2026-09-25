@@ -94,6 +94,7 @@ export const PLANET_CORE = {
 export const DOMAIN_META = {
   business: { title: "Бизнес и карьера", houses: [10, 7, 11] },
   family: { title: "Семья и дом", houses: [2, 4] },
+  children: { title: "Дети", houses: [5] },
   fate: { title: "Судьба и предназначение", houses: [9, 10] },
   society: { title: "Общество и окружение", houses: [11, 7, 3] },
 };

@@ -994,6 +994,176 @@ function HousesPanel({ details }) {
 }
 
 /* =========================================================
+   UI: семья и дети (для женской карты — Юпитер как карака мужа)
+   ========================================================= */
+
+// Оценка периода махадаши для двух смежных тем: дети (5 дом) и партнёр (7 дом + Юпитер —
+// классическая карака мужа в женской карте, поэтому темы «дети» и «муж» у Юпитера
+// пересекаются не случайно). Не самостоятельная методика, а прикидка поверх уже посчитанных
+// домов и классических дружб планет — тот же принцип, что и в остальных эвристиках приложения.
+function familyRowScore(lordCode, row, details) {
+  let s = 0;
+  if (lordCode === row.lord) s += 3;
+  if (details?.[lordCode]?.house === row.houseNum) s += 2;
+  const rel = relation(lordCode, row.lord);
+  if (rel === "friend" || rel === "same") s += 2;
+  else if (rel === "enemy") s -= 2;
+  if (lordCode !== "Ju") {
+    const relJu = relation(lordCode, "Ju");
+    if (relJu === "friend") s += 1;
+    else if (relJu === "enemy") s -= 1;
+  } else {
+    s += 2;
+  }
+  if (NATURAL_BENEFICS.includes(lordCode) && lordCode !== row.lord) s += 1;
+  else if (NATURAL_MALEFICS.includes(lordCode) && lordCode !== row.lord) s -= 1;
+  return s;
+}
+
+function familyScoreVerdict(score) {
+  if (score >= 5) return "good";
+  if (score <= 0) return "watch";
+  return "mixed";
+}
+
+// Разбор 7 дома и Юпитера как караки мужа — отдельная (не из DOMAIN_META) логика, чтобы не
+// путать тему партнёрства с темой бизнеса, которая тоже частично завязана на 7 дом.
+function assessPartner(rows, details) {
+  const row7 = rows[6];
+  const juHouse = details?.Ju?.house;
+  const juSign = details?.Ju?.sign;
+  const pluses = [];
+  const minuses = [];
+
+  row7.occupants.forEach((c) => {
+    if (NATURAL_BENEFICS.includes(c) || NATURAL_MILD_BENEFICS.includes(c)) {
+      pluses.push(`${PLANET_NAMES[c]} стоит прямо в 7 доме (партнёрство, брак) — её качества (${PLANET_CORE[c]}) поддерживают тему отношений.`);
+    } else {
+      minuses.push(`${PLANET_NAMES[c]} стоит в 7 доме — непростая планета здесь означает, что тема отношений требует больше сознательных усилий, чем везения самого по себе. Что делать: ${PLANET_FOCUS_ADVICE[c]}.`);
+    }
+  });
+
+  if (row7.lordHouse) {
+    if (STRONG_HOUSES.has(row7.lordHouse)) {
+      pluses.push(`Управитель 7 дома, ${PLANET_NAMES[row7.lord]}, сам стоит в сильной части карты (${row7.lordHouse} дом, ${HOUSE_MEANINGS[row7.lordHouse]}) — у партнёрской темы есть устойчивая опора.`);
+    } else if (DIFFICULT_HOUSES.has(row7.lordHouse)) {
+      minuses.push(`Управитель 7 дома, ${PLANET_NAMES[row7.lord]}, стоит в непростом доме (${row7.lordHouse}, ${HOUSE_MEANINGS[row7.lordHouse]}) — партнёрство скорее потребует осознанной работы, чем сложится само собой.`);
+    }
+  }
+
+  if (juHouse) {
+    if (STRONG_HOUSES.has(juHouse)) {
+      pluses.push(`Юпитер — классическая карака мужа в женской карте — сам стоит в сильной части карты (${juHouse} дом, ${HOUSE_MEANINGS[juHouse]}). Хороший знак для качества партнёрства и поддержки со стороны мужа.`);
+    } else if (DIFFICULT_HOUSES.has(juHouse)) {
+      minuses.push(`Юпитер — карака мужа — стоит в непростом доме (${juHouse}, ${HOUSE_MEANINGS[juHouse]}). Это не означает «плохого мужа» — скорее что тема партнёрства требует больше сознательного участия и терпения с обеих сторон.`);
+    }
+  }
+
+  const score = pluses.length - minuses.length;
+  const verdict = score > 0 ? "good" : score < 0 ? "watch" : "mixed";
+  const juTrait = juSign != null ? SIGN_TRAITS[juSign] : null;
+
+  return { pluses, minuses, verdict, juSign, juTrait, row7 };
+}
+
+function FamilyPanel({ person, details, periods }) {
+  if (person.gender !== "female") {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", textAlign: "center", color: "#8b84b8", fontSize: 13, lineHeight: 1.6, maxWidth: 480, margin: "0 auto" }}>
+        Этот разбор построен на классической связке «Юпитер — карака мужа», которая применяется именно к женской карте (пол задаётся в форме на вкладке «Карта»). Тема детей в целом — в разделе «Дома и сферы» (карточка «Дети»), партнёрство — во вкладке «Совместимость».
+      </div>
+    );
+  }
+  if (!details?.As) {
+    return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
+  }
+  const rows = buildHouseRows(details);
+  const childrenA = assessDomain(DOMAIN_META.children, rows);
+  const childrenVm = HOUSE_VERDICT_META[childrenA.verdict];
+  const partnerA = assessPartner(rows, details);
+  const partnerVm = HOUSE_VERDICT_META[partnerA.verdict];
+
+  const scored = (periods || []).map((p) => {
+    const childrenScore = familyRowScore(p.lord, rows[4], details);
+    const partnerScore = familyRowScore(p.lord, rows[6], details);
+    return { ...p, childrenScore, partnerScore };
+  });
+  const bestChildren = scored.length ? scored.reduce((a, b) => (b.childrenScore > a.childrenScore ? b : a)) : null;
+  const bestPartner = scored.length ? scored.reduce((a, b) => (b.partnerScore > a.partnerScore ? b : a)) : null;
+
+  const scoreBadge = (score) => {
+    const v = familyScoreVerdict(score);
+    const m = HOUSE_VERDICT_META[v];
+    return <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 7px", borderRadius: 14, background: m.bg, color: m.color, whiteSpace: "nowrap" }}>{score > 0 ? "+" : ""}{score}</span>;
+  };
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+        В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего.
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дети — 5 дом</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: childrenVm.bg, color: childrenVm.color }}>{childrenVm.label}</span>
+        </div>
+        {childrenA.context.map((t, i) => (
+          <p key={i} style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>{t}</p>
+        ))}
+        {childrenA.pluses.map((t, i) => (
+          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+        ))}
+        {[...childrenA.minuses, ...childrenA.watch].map((t, i) => (
+          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+        ))}
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Партнёр — 7 дом и Юпитер (карака мужа)</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: partnerVm.bg, color: partnerVm.color }}>{partnerVm.label}</span>
+        </div>
+        {partnerA.juTrait && (
+          <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>
+            Юпитер стоит в знаке {SIGNS[partnerA.juSign]} — по этому знаку в партнёре часто резонируют такие качества: {partnerA.juTrait}.
+          </p>
+        )}
+        {partnerA.pluses.map((t, i) => (
+          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+        ))}
+        {partnerA.minuses.map((t, i) => (
+          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+        ))}
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
+        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Лучшие периоды</div>
+        <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 10, lineHeight: 1.5 }}>
+          По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни.
+        </div>
+        {!periods && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Дождитесь загрузки периодов на вкладке «Периоды жизни».</div>}
+        {bestChildren && bestPartner && (
+          <div style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #2e2a5c" }}>
+            Для темы детей заметнее всего выглядит период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestChildren.lord]}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). Для партнёрства — период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestPartner.lord]}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).
+          </div>
+        )}
+        {scored.map((p, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "6px 0", borderTop: i ? "1px solid #2e2a5c" : "none" }}>
+            <span style={{ color: "#f1ede4" }}>{PLANET_NAMES[p.lord]}</span>
+            <span style={{ color: "#766fa0", fontSize: 11 }}>{p.start?.toISOString().slice(0, 10)} — {p.end?.toISOString().slice(0, 10)}</span>
+            <span style={{ display: "flex", gap: 6 }}>
+              <span title="Дети">Д {scoreBadge(p.childrenScore)}</span>
+              <span title="Партнёр">П {scoreBadge(p.partnerScore)}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    UI: синастрия (брак / бизнес / дружба)
    ========================================================= */
 
@@ -1431,6 +1601,7 @@ export default function JyotishApp() {
     { id: "chart", label: "Карта" },
     { id: "dasha", label: "Периоды жизни" },
     { id: "houses", label: "Дома и сферы" },
+    { id: "family", label: "Семья и дети" },
     { id: "synastry", label: "Совместимость" },
     { id: "relocation", label: "Релокация" },
   ];
@@ -1488,6 +1659,8 @@ export default function JyotishApp() {
       )}
 
       {tab === "houses" && <HousesPanel details={chart1.details} />}
+
+      {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} />}
 
       {tab === "synastry" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
