@@ -329,43 +329,40 @@ function ymGoal(name, params) {
   }
 }
 
-/* Честное сравнение бесплатного и полного доступа — без цены, её ещё нет. */
+/* Честное сравнение бесплатного и полного доступа — без цены, её ещё нет. Отдельная вкладка,
+   а не свёрнутый блок под табами — так её проще найти и не нужно объяснять каждый раз заново. */
 function PricingInfo() {
-  const [open, setOpen] = useState(false);
+  useEffect(() => { ymGoal("tab_pricing_viewed"); }, []);
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto 18px", fontFamily: "system-ui, sans-serif" }}>
-      <div
-        onClick={() => { const next = !open; setOpen(next); if (next) ymGoal("pricing_info_opened"); }}
-        style={{ textAlign: "center", fontSize: 11.5, color: "#8b84b8", cursor: "pointer", userSelect: "none" }}
-      >
-        {open ? "▾" : "▸"} Что входит бесплатно / в полной версии
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+        Приложение бесплатное. Часть самых «дорогих» по расчётам функций ограничена, чтобы сервис оставался бесплатным и стабильным для всех — но всё, что уже открыто ниже, доступно без ограничений и без регистрации.
       </div>
-      {open && (
-        <div style={{
-          marginTop: 8, background: "#1c1846", border: "1px solid #332c66", borderRadius: 10,
-          padding: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, fontSize: 12, lineHeight: 1.55,
-        }}>
-          <div>
-            <div style={{ color: "#8fd19e", fontWeight: 600, marginBottom: 6 }}>Бесплатно</div>
-            <ul style={{ margin: 0, paddingLeft: 16, color: "#c9c4e8" }}>
-              <li>Полная карта, дома и сферы жизни</li>
-              <li>Даша: махадаша и антардаша целиком</li>
-              <li>Пратьянтардаша — для периода, активного сейчас</li>
-              <li>Подбор лучших мест по релокации (1 раз для одних данных рождения) + разбор одного выбранного города</li>
-              <li>Совместимость: общий балл и вердикт</li>
-            </ul>
-          </div>
-          <div>
-            <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 6 }}>Полная версия (скоро)</div>
-            <ul style={{ margin: 0, paddingLeft: 16, color: "#c9c4e8" }}>
-              <li>Пратьянтардаша для всех периодов, не только текущего</li>
-              <li>Разбор любого числа городов в релокации, пересчёт для других данных рождения</li>
-              <li>Расшифровка слабых коотов совместимости — что именно значит каждый фактор</li>
-            </ul>
-            <div style={{ fontSize: 10.5, color: "#6f6798", marginTop: 6, fontStyle: "italic" }}>Цена и способ оплаты — уточняются.</div>
-          </div>
+      <div style={{
+        background: "#1c1846", border: "1px solid #332c66", borderRadius: 10,
+        padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13, lineHeight: 1.6,
+      }}>
+        <div>
+          <div style={{ color: "#8fd19e", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Бесплатно</div>
+          <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
+            <li>Полная карта, дома и сферы жизни</li>
+            <li>Даша: махадаша и антардаша целиком</li>
+            <li>Пратьянтардаша — для периода, активного сейчас</li>
+            <li>Семья и дети — целиком</li>
+            <li>Подбор лучших мест по релокации (1 раз для одних данных рождения) + разбор одного выбранного города</li>
+            <li>Совместимость: общий балл и вердикт</li>
+          </ul>
         </div>
-      )}
+        <div>
+          <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Полная версия (скоро)</div>
+          <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
+            <li>Пратьянтардаша для всех периодов, не только текущего</li>
+            <li>Разбор любого числа городов в релокации, пересчёт для других данных рождения</li>
+            <li>Расшифровка слабых коотов совместимости — что именно значит каждый фактор</li>
+          </ul>
+          <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, fontStyle: "italic" }}>Цена и способ оплаты — уточняются.</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1069,8 +1066,19 @@ function assessPartner(rows, details) {
 function FamilyPanel({ person, details, periods }) {
   if (person.gender !== "female") {
     return (
-      <div style={{ fontFamily: "system-ui, sans-serif", textAlign: "center", color: "#8b84b8", fontSize: 13, lineHeight: 1.6, maxWidth: 480, margin: "0 auto" }}>
-        Этот разбор построен на классической связке «Юпитер — карака мужа», которая применяется именно к женской карте (пол задаётся в форме на вкладке «Карта»). Тема детей в целом — в разделе «Дома и сферы» (карточка «Дети»), партнёрство — во вкладке «Совместимость».
+      <div style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ background: "#1c1846", borderRadius: 10, padding: 20, textAlign: "center", maxWidth: 480, margin: "0 auto" }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Этот разбор — для женской карты</div>
+          <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10 }}>
+            Он построен на классической связке «Юпитер — карака мужа», которая применяется именно к женской карте.
+          </p>
+          <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
+            Чтобы открыть его: на вкладке «Карта» в поле «Пол (для совместимости)» выберите «Женский».
+          </p>
+          <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.6, marginTop: 10 }}>
+            А пока — тема детей в целом есть в «Дома и сферы» (карточка «Дети»), партнёрство — во вкладке «Совместимость».
+          </p>
+        </div>
       </div>
     );
   }
@@ -1604,6 +1612,7 @@ export default function JyotishApp() {
     { id: "family", label: "Семья и дети" },
     { id: "synastry", label: "Совместимость" },
     { id: "relocation", label: "Релокация" },
+    { id: "pricing", label: "Тарифы" },
   ];
 
   return (
@@ -1623,8 +1632,6 @@ export default function JyotishApp() {
           }}>{t.label}</button>
         ))}
       </div>
-
-      <PricingInfo />
 
       {tab === "chart" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1706,6 +1713,8 @@ export default function JyotishApp() {
       {tab === "relocation" && (
         <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} />
       )}
+
+      {tab === "pricing" && <PricingInfo />}
     </div>
   );
 }
