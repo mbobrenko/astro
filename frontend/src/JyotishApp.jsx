@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { LangProvider, useLang } from "./i18n.jsx";
 import {
   fetchPlanets,
   fetchMajorDasha,
@@ -339,36 +340,37 @@ function ymGoal(name, params) {
 /* Честное сравнение бесплатного и полного доступа — без цены, её ещё нет. Отдельная вкладка,
    а не свёрнутый блок под табами — так её проще найти и не нужно объяснять каждый раз заново. */
 function PricingInfo() {
+  const { t } = useLang();
   useEffect(() => { ymGoal("tab_pricing_viewed"); }, []);
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-        Приложение бесплатное. Часть самых «дорогих» по расчётам функций ограничена, чтобы сервис оставался бесплатным и стабильным для всех — но всё, что уже открыто ниже, доступно без ограничений и без регистрации.
+        {t("pricing_intro")}
       </div>
       <div style={{
         background: "#1c1846", border: "1px solid #332c66", borderRadius: 10,
         padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13, lineHeight: 1.6,
       }}>
         <div>
-          <div style={{ color: "#8fd19e", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Бесплатно</div>
+          <div style={{ color: "#8fd19e", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>{t("pricing_free_title")}</div>
           <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
-            <li>Полная карта, дома и сферы жизни</li>
-            <li>Даша: махадаша и антардаша целиком</li>
-            <li>Пратьянтардаша — для периода, активного сейчас</li>
-            <li>Подбор лучших мест по релокации (1 раз для одних данных рождения) + разбор одного выбранного города</li>
-            <li>Совместимость (Аштакута): первая проверка для пары — бесплатно</li>
+            <li>{t("pricing_free_chart")}</li>
+            <li>{t("pricing_free_dasha")}</li>
+            <li>{t("pricing_free_pratyantar")}</li>
+            <li>{t("pricing_free_relocation")}</li>
+            <li>{t("pricing_free_compat")}</li>
           </ul>
         </div>
         <div>
-          <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Пакет запросов</div>
+          <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>{t("pricing_paid_title")}</div>
           <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
-            <li>Семья и дети — целиком (дети, партнёр, лучшие периоды), открывается покупкой любого пакета навсегда</li>
-            <li>Пратьянтардаша для всех периодов, не только текущего — 1 запрос за период</li>
-            <li>Разбор дополнительных городов и повторный подбор в релокации — 1 запрос за штуку</li>
-            <li>Повторная проверка совместимости с другими данными рождения — 1 запрос</li>
+            <li>{t("pricing_paid_family")}</li>
+            <li>{t("pricing_paid_pratyantar")}</li>
+            <li>{t("pricing_paid_relocation")}</li>
+            <li>{t("pricing_paid_compat")}</li>
           </ul>
           <div style={{ fontSize: 12, color: "#c9c4e8", marginTop: 10, lineHeight: 1.6 }}>
-            10 запросов — 690 ₽ · 15 запросов — 990 ₽ · 20 запросов — 1590 ₽. Когда лимит заканчивается, можно докупить любой из пакетов ещё раз — они складываются. Вход и покупка — ниже.
+            {t("pricing_tiers_line")}
           </div>
         </div>
       </div>
@@ -379,6 +381,7 @@ function PricingInfo() {
 /* Мягкий пейволл: пока без ссылки на оплату/контакт — просто показываем, что дальше есть платная часть,
    и считаем, сколько раз на неё реально натыкаются (goalName шлётся один раз при показе тизера). */
 function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageInfo, buying }) {
+  const { t } = useLang();
   useEffect(() => {
     if (goalName) ymGoal(goalName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -396,11 +399,11 @@ function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageI
           background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "7px 14px",
           fontSize: 12, fontWeight: 700, cursor: "pointer",
         }}>
-          Купить пакет →
+          {t("paywall_buy_button")}
         </button>
       ) : (
         <div style={{ fontSize: 11, color: "#8b84b8", fontStyle: "italic" }}>
-          {account ? "Войдите и купите пакет на вкладке «Тарифы»" : "Доступно в полной версии — скоро откроем"}
+          {account ? t("paywall_login_hint") : t("paywall_soon")}
         </div>
       )}
     </div>
@@ -409,6 +412,7 @@ function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageI
 
 /* Вход по коду на email + статус пакета + кнопка покупки. Живёт на вкладке «Тарифы». */
 function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying }) {
+  const { t } = useLang();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [stage, setStage] = useState("email"); // email | code
@@ -423,7 +427,7 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
     try {
       await requestLoginCode(email.trim());
       setStage("code");
-      setMsg({ type: "ok", text: "Код отправлен на почту (действует 10 минут)." });
+      setMsg({ type: "ok", text: t("account_code_sent") });
     } catch (err) {
       setMsg({ type: "err", text: err.message });
     } finally {
@@ -456,27 +460,27 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
     return (
       <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16, marginTop: 16, fontFamily: "system-ui, sans-serif" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontSize: 13, color: "#c9c4e8" }}>Вы вошли как <b style={{ color: "#f1ede4" }}>{account.email}</b></div>
-          <button onClick={handleLogout} style={{ background: "none", border: "1px solid #332c66", color: "#8b84b8", borderRadius: 14, padding: "4px 12px", fontSize: 11, cursor: "pointer" }}>Выйти</button>
+          <div style={{ fontSize: 13, color: "#c9c4e8" }}>{t("account_logged_in_as")} <b style={{ color: "#f1ede4" }}>{account.email}</b></div>
+          <button onClick={handleLogout} style={{ background: "none", border: "1px solid #332c66", color: "#8b84b8", borderRadius: 14, padding: "4px 12px", fontSize: 11, cursor: "pointer" }}>{t("account_logout")}</button>
         </div>
         <div style={{ fontSize: 13, color: "#c9c4e8", marginTop: 10 }}>
           {account.hasActivePackage
-            ? <>Остаток пакета: <b style={{ color: "#e8c46b" }}>{account.remaining}</b> из {account.totalQuota}</>
+            ? <>{t("account_remaining")} <b style={{ color: "#e8c46b" }}>{account.remaining}</b> {t("account_of")} {account.totalQuota}</>
             : account.totalQuota > 0
-              ? "Пакет полностью использован."
-              : "Пакет пока не куплен — семья и дети, повторная совместимость, доп. релокации и все пратьянтардаши остаются за пейволлом."}
+              ? t("account_exhausted")
+              : t("account_none")}
         </div>
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {tiers.map((t) => (
-            <button key={t.id} onClick={() => onBuyPackage(t.id)} disabled={buying} style={{
+          {tiers.map((tier) => (
+            <button key={tier.id} onClick={() => onBuyPackage(tier.id)} disabled={buying} style={{
               background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
               padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
             }}>
-              {t.quota} запросов — {(t.priceKopeks / 100).toFixed(0)} ₽
+              {tier.quota} {t("account_requests_word")} — {(tier.priceKopeks / 100).toFixed(0)} ₽
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: "#6f6798", marginTop: 6 }}>Когда лимит закончится — можно докупить любой из пакетов ещё раз, они складываются.</div>
+        <div style={{ fontSize: 11, color: "#6f6798", marginTop: 6 }}>{t("account_restock_hint")}</div>
         {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
       </div>
     );
@@ -484,27 +488,27 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
 
   return (
     <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16, marginTop: 16, fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Вход для покупки пакета</div>
+      <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>{t("account_login_title")}</div>
       {stage === "email" ? (
         <form onSubmit={handleRequestCode} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="ваш email" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
+            placeholder={t("account_email_placeholder")} style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
           <button type="submit" disabled={busy} style={{
             background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "8px 16px",
             fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer",
-          }}>{busy ? "…" : "Получить код"}</button>
+          }}>{busy ? "…" : t("account_get_code")}</button>
         </form>
       ) : (
         <form onSubmit={handleVerify} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input required value={code} onChange={(e) => setCode(e.target.value)} placeholder="код из письма"
+          <input required value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("account_code_placeholder")}
             style={{ ...inputStyle, flex: 1, minWidth: 140 }} />
           <button type="submit" disabled={busy} style={{
             background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "8px 16px",
             fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer",
-          }}>{busy ? "…" : "Войти"}</button>
+          }}>{busy ? "…" : t("account_verify")}</button>
           <button type="button" onClick={() => { setStage("email"); setMsg(null); }} style={{
             background: "none", border: "none", color: "#8b84b8", fontSize: 12, cursor: "pointer",
-          }}>← другой email</button>
+          }}>{t("account_other_email")}</button>
         </form>
       )}
       {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
@@ -680,6 +684,7 @@ function GeoSearch({ onPick, dateForTz }) {
 }
 
 function BirthForm({ person, setPerson, label }) {
+  const { t } = useLang();
   const upd = (k) => (e) => setPerson({ ...person, [k]: e.target.value });
 
   const handlePick = useCallback(async (cand) => {
@@ -691,16 +696,16 @@ function BirthForm({ person, setPerson, label }) {
       <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>{label}</div>
 
       <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-        <div><span style={labelStyle}>Имя</span><input style={inputStyle} value={person.name} onChange={upd("name")} placeholder="Имя" /></div>
+        <div><span style={labelStyle}>{t("form_name")}</span><input style={inputStyle} value={person.name} onChange={upd("name")} placeholder={t("form_name")} /></div>
         <div>
-          <span style={labelStyle}>Пол (для совместимости)</span>
+          <span style={labelStyle}>{t("form_gender")}</span>
           <select style={inputStyle} value={person.gender} onChange={upd("gender")}>
-            <option value="male">Мужской</option>
-            <option value="female">Женский</option>
+            <option value="male">{t("form_gender_male")}</option>
+            <option value="female">{t("form_gender_female")}</option>
           </select>
         </div>
-        <div><span style={labelStyle}>Дата рождения</span><input style={inputStyle} type="date" value={person.date} onChange={upd("date")} /></div>
-        <div><span style={labelStyle}>Время рождения</span><input style={inputStyle} type="time" value={person.time} onChange={upd("time")} /></div>
+        <div><span style={labelStyle}>{t("form_birth_date")}</span><input style={inputStyle} type="date" value={person.date} onChange={upd("date")} /></div>
+        <div><span style={labelStyle}>{t("form_birth_time")}</span><input style={inputStyle} type="time" value={person.time} onChange={upd("time")} /></div>
       </div>
 
       <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(person.date)} />
@@ -1811,7 +1816,8 @@ function saveSavedPerson(key, person) {
   }
 }
 
-export default function JyotishApp() {
+function JyotishAppInner() {
+  const { t, lang, setLang } = useLang();
   const [tab, setTab] = useState("chart");
   const [person1, setPerson1] = useState(() => loadSavedPerson("astro_person1", defaultPerson1));
   const [person2, setPerson2] = useState(() => loadSavedPerson("astro_person2", defaultPerson2));
@@ -1903,21 +1909,26 @@ export default function JyotishApp() {
   const heuristicItems = matchKind !== "marriage" ? heuristicCompat(matchKind, chart1, chart2) : null;
 
   const tabs = [
-    { id: "chart", label: "Карта" },
-    { id: "dasha", label: "Периоды жизни" },
-    { id: "houses", label: "Дома и сферы" },
-    { id: "family", label: "Семья и дети" },
-    { id: "synastry", label: "Совместимость" },
-    { id: "relocation", label: "Релокация" },
-    { id: "pricing", label: "Тарифы" },
+    { id: "chart", label: t("tab_chart") },
+    { id: "dasha", label: t("tab_dasha") },
+    { id: "houses", label: t("tab_houses") },
+    { id: "family", label: t("tab_family") },
+    { id: "synastry", label: t("tab_synastry") },
+    { id: "relocation", label: t("tab_relocation") },
+    { id: "pricing", label: t("tab_pricing") },
   ];
 
   return (
     <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
-      <div style={{ textAlign: "center", marginBottom: 18 }}>
-        <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>ВЕДИЧЕСКАЯ АСТРОЛОГИЯ</div>
+      <div style={{ textAlign: "center", marginBottom: 18, position: "relative" }}>
+        <button onClick={() => setLang(lang === "ru" ? "en" : "ru")} style={{
+          position: "absolute", right: 0, top: 0, background: "#1c1846", color: "#c9c4e8",
+          border: "1px solid #332c66", borderRadius: 14, padding: "4px 12px", fontSize: 11,
+          cursor: "pointer", fontFamily: "system-ui, sans-serif", fontWeight: 600,
+        }}>{t("lang_switch_to")}</button>
+        <div style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b" }}>{t("appTitle")}</div>
         <div style={{ fontSize: 11, color: "#6f6798", marginTop: 2, fontFamily: "system-ui, sans-serif" }}>
-          живые расчёты по данным рождения, сидерический зодиак
+          {t("appSubtitle")}
         </div>
       </div>
 
@@ -1932,9 +1943,9 @@ export default function JyotishApp() {
 
       {tab === "chart" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
-          <BirthForm person={person1} setPerson={setPerson1} label="Данные рождения" />
-          {chart1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка карты…</div>}
-          {chart1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {chart1.error}</div>}
+          <BirthForm person={person1} setPerson={setPerson1} label={t("form_label_main")} />
+          {chart1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{t("loading_chart")}</div>}
+          {chart1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>{t("error_prefix")}: {chart1.error}</div>}
           {chart1.details && (
             <>
               <ChartWheel details={chart1.details} />
@@ -1968,7 +1979,7 @@ export default function JyotishApp() {
 
       {tab === "synastry" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
-          <BirthForm person={person2} setPerson={setPerson2} label="Второй профиль" />
+          <BirthForm person={person2} setPerson={setPerson2} label={t("form_label_second")} />
 
           <div style={{ display: "flex", gap: 6, marginBottom: 16, justifyContent: "center" }}>
             {[["marriage", "Брак"], ["business", "Бизнес-партнёрство"], ["friendship", "Дружба"]].map(([id, lbl]) => (
@@ -2029,5 +2040,13 @@ export default function JyotishApp() {
         </>
       )}
     </div>
+  );
+}
+
+export default function JyotishApp() {
+  return (
+    <LangProvider>
+      <JyotishAppInner />
+    </LangProvider>
   );
 }
