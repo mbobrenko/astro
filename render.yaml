@@ -13,3 +13,20 @@ services:
         sync: false
       - key: PORT
         value: 3001
+      # --- Аккаунты, лимит пакета и оплата (см. DEPLOY.md, раздел "Шаг 5") ---
+      - key: DATABASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: YOOKASSA_SHOP_ID
+        sync: false
+      - key: YOOKASSA_SECRET_KEY
+        sync: false
+      - key: PAYMENT_RETURN_URL
+        sync: false
+      - key: PACKAGE_QUOTA
+        value: 25
+      - key: PACKAGE_PRICE_KOPEKS
+        value: 69000
