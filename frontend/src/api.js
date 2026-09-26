@@ -139,13 +139,13 @@ export async function checkUsage(kind, requestKey) {
   return r;
 }
 
-export function createPackagePayment() {
-  return post("/api/pay/create", {});
+export function createPackagePayment(tierId) {
+  return post("/api/pay/create", { tierId });
 }
 
-// Не бросает исключение — используется для показа цены/размера пакета до входа
+// Не бросает исключение — используется для показа тарифных пакетов до входа
 export async function fetchPackageInfo() {
   const r = await getQuiet("/api/pay/info");
   if (!r.ok) return null;
-  return { quota: r.quota, priceKopeks: r.priceKopeks };
+  return { tiers: r.tiers || [] };
 }

@@ -360,15 +360,16 @@ function PricingInfo() {
           </ul>
         </div>
         <div>
-          <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Полная версия (скоро)</div>
+          <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Пакет запросов</div>
           <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
-            <li>Семья и дети — целиком (дети, партнёр, лучшие периоды)</li>
-            <li>Пратьянтардаша для всех периодов, не только текущего</li>
-            <li>Разбор любого числа городов в релокации, пересчёт для других данных рождения</li>
-            <li>Повторная проверка совместимости с другими данными рождения</li>
-            <li>Расшифровка слабых коотов совместимости — что именно значит каждый фактор</li>
+            <li>Семья и дети — целиком (дети, партнёр, лучшие периоды), открывается покупкой любого пакета навсегда</li>
+            <li>Пратьянтардаша для всех периодов, не только текущего — 1 запрос за период</li>
+            <li>Разбор дополнительных городов и повторный подбор в релокации — 1 запрос за штуку</li>
+            <li>Повторная проверка совместимости с другими данными рождения — 1 запрос</li>
           </ul>
-          <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, fontStyle: "italic" }}>Цена и способ оплаты — уточняются.</div>
+          <div style={{ fontSize: 12, color: "#c9c4e8", marginTop: 10, lineHeight: 1.6 }}>
+            10 запросов — 690 ₽ · 15 запросов — 990 ₽ · 20 запросов — 1590 ₽. Когда лимит заканчивается, можно докупить любой из пакетов ещё раз — они складываются. Вход и покупка — ниже.
+          </div>
         </div>
       </div>
     </div>
@@ -377,13 +378,12 @@ function PricingInfo() {
 
 /* Мягкий пейволл: пока без ссылки на оплату/контакт — просто показываем, что дальше есть платная часть,
    и считаем, сколько раз на неё реально натыкаются (goalName шлётся один раз при показе тизера). */
-function PaywallTeaser({ title, text, goalName, account, onBuyPackage, packageInfo, buying }) {
+function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageInfo, buying }) {
   useEffect(() => {
     if (goalName) ymGoal(goalName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const canBuy = account?.loggedIn && onBuyPackage;
-  const priceLabel = packageInfo ? ` из ${packageInfo.quota} запросов — ${(packageInfo.priceKopeks / 100).toFixed(0)} ₽` : "";
+  const canBuy = account?.loggedIn && onGoToPricing;
   return (
     <div style={{
       marginTop: 10, padding: "12px 14px", borderRadius: 8,
@@ -392,11 +392,11 @@ function PaywallTeaser({ title, text, goalName, account, onBuyPackage, packageIn
       <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 4 }}>🔒 {title}</div>
       <div style={{ fontSize: 11.5, color: "#c9c4e8", lineHeight: 1.5, marginBottom: 6 }}>{text}</div>
       {canBuy ? (
-        <button onClick={onBuyPackage} disabled={buying} style={{
+        <button onClick={onGoToPricing} style={{
           background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "7px 14px",
-          fontSize: 12, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
+          fontSize: 12, fontWeight: 700, cursor: "pointer",
         }}>
-          {buying ? "Секунду…" : `Купить пакет${priceLabel}`}
+          Купить пакет →
         </button>
       ) : (
         <div style={{ fontSize: 11, color: "#8b84b8", fontStyle: "italic" }}>
@@ -415,8 +415,7 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const priceLabel = packageInfo ? `${(packageInfo.priceKopeks / 100).toFixed(0)} ₽` : "…";
-  const quotaLabel = packageInfo ? packageInfo.quota : "…";
+  const tiers = packageInfo?.tiers || [];
 
   async function handleRequestCode(e) {
     e.preventDefault();
@@ -467,12 +466,17 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
               ? "Пакет полностью использован."
               : "Пакет пока не куплен — семья и дети, повторная совместимость, доп. релокации и все пратьянтардаши остаются за пейволлом."}
         </div>
-        <button onClick={onBuyPackage} disabled={buying} style={{
-          marginTop: 10, background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
-          padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
-        }}>
-          {buying ? "Секунду…" : `Купить пакет из ${quotaLabel} запросов — ${priceLabel}`}
-        </button>
+        <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {tiers.map((t) => (
+            <button key={t.id} onClick={() => onBuyPackage(t.id)} disabled={buying} style={{
+              background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
+              padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
+            }}>
+              {t.quota} запросов — {(t.priceKopeks / 100).toFixed(0)} ₽
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "#6f6798", marginTop: 6 }}>Когда лимит закончится — можно докупить любой из пакетов ещё раз, они складываются.</div>
         {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
       </div>
     );
@@ -742,7 +746,7 @@ function PlanetTable({ details }) {
    UI: даша (маха → антар → пратьянтар)
    ========================================================= */
 
-function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onBuyPackage, packageInfo, buying }) {
+function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onGoToPricing, packageInfo, buying }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [unlockedByPackage, setUnlockedByPackage] = useState(false);
   const requestKey = `${mdEn}|${adEn}`;
@@ -789,7 +793,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onB
         text="Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — из пакета (1 запрос за период, повторный просмотр бесплатен)."
         goalName="paywall_pratyantar_hit"
         account={account}
-        onBuyPackage={onBuyPackage}
+        onGoToPricing={onGoToPricing}
         packageInfo={packageInfo}
         buying={buying}
       />
@@ -833,7 +837,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onB
   );
 }
 
-function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account, onBuyPackage, packageInfo, buying }) {
+function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account, onGoToPricing, packageInfo, buying }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [subOpen, setSubOpen] = useState(null);
 
@@ -893,7 +897,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
             }}>
               {isOpen ? "▾" : "▸"} под-периоды {PLANET_NAMES[code]} (пратьянтардаша, свои даты внутри этой антардаши)
             </div>
-            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} account={account} onBuyPackage={onBuyPackage} packageInfo={packageInfo} buying={buying} />
+            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} account={account} onGoToPricing={onGoToPricing} packageInfo={packageInfo} buying={buying} />
           </div>
         );
       })}
@@ -901,7 +905,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
   );
 }
 
-function DashaTimeline({ birth, periods, details, account, onBuyPackage, packageInfo, buying }) {
+function DashaTimeline({ birth, periods, details, account, onGoToPricing, packageInfo, buying }) {
   const now = new Date();
   const [openIdx, setOpenIdx] = useState(null);
 
@@ -958,7 +962,7 @@ function DashaTimeline({ birth, periods, details, account, onBuyPackage, package
                 })()}
                 <div style={{ marginTop: 10 }}>
                   <b style={{ color: "#9089c9", fontSize: 12 }}>Антардаши (кликните — раскроется ещё и пратьянтардаша):</b>
-                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} account={account} onBuyPackage={onBuyPackage} packageInfo={packageInfo} buying={buying} />
+                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} account={account} onGoToPricing={onGoToPricing} packageInfo={packageInfo} buying={buying} />
                 </div>
               </div>
             )}
@@ -1207,7 +1211,7 @@ function assessPartner(rows, details) {
   return { pluses, minuses, verdict, juSign, juTrait, row7 };
 }
 
-function FamilyPanel({ person, details, periods, account, onBuyPackage, packageInfo, buying }) {
+function FamilyPanel({ person, details, periods, account, onGoToPricing, packageInfo, buying }) {
   if (person.gender !== "female") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1253,7 +1257,7 @@ function FamilyPanel({ person, details, periods, account, onBuyPackage, packageI
             text="Открывается покупкой пакета (даёт доступ навсегда, независимо от остатка лимита на другие функции)."
             goalName="paywall_family_hit"
             account={account}
-            onBuyPackage={onBuyPackage}
+            onGoToPricing={onGoToPricing}
             packageInfo={packageInfo}
             buying={buying}
           />
@@ -1350,7 +1354,7 @@ function FamilyPanel({ person, details, periods, account, onBuyPackage, packageI
    UI: синастрия (брак / бизнес / дружба)
    ========================================================= */
 
-function MatchResult({ data, account, onBuyPackage, packageInfo, buying }) {
+function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
   if (!data) return null;
   const total = data.total || {};
   const conclusion = data.conclusion || {};
@@ -1487,7 +1491,7 @@ function HeuristicMatch({ kind, items }) {
    UI: релокация
    ========================================================= */
 
-function RelocationPanel({ person, originalChart, activeMahaLord, account, onBuyPackage, packageInfo, buying }) {
+function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoToPricing, packageInfo, buying }) {
   const [status, setStatus] = useState(null);
   const [result, setResult] = useState(null);
   const [bestStatus, setBestStatus] = useState(null); // null | "loading" | "done"
@@ -1654,7 +1658,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onBuy
               text="Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Пересчёт для других данных рождения или другой части света — 1 запрос из пакета."
               goalName="paywall_relocation_scan_hit"
               account={account}
-              onBuyPackage={onBuyPackage}
+              onGoToPricing={onGoToPricing}
               packageInfo={packageInfo}
               buying={buying}
             />
@@ -1697,7 +1701,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onBuy
             text={`Подробный разбор для «${unlockedCity}» остаётся доступен в любой момент. Ещё один город — 1 запрос из пакета.`}
             goalName="paywall_relocation_hit"
             account={account}
-            onBuyPackage={onBuyPackage}
+            onGoToPricing={onGoToPricing}
             packageInfo={packageInfo}
             buying={buying}
           />
@@ -1829,10 +1833,10 @@ export default function JyotishApp() {
   useEffect(() => { refreshAccount(); }, [refreshAccount]);
   useEffect(() => { fetchPackageInfo().then(setPackageInfo); }, []);
 
-  const buyPackage = useCallback(async () => {
+  const buyPackage = useCallback(async (tierId) => {
     setBuying(true);
     try {
-      const r = await createPackagePayment();
+      const r = await createPackagePayment(tierId);
       if (r.confirmationUrl) {
         window.location.href = r.confirmationUrl; // редирект на страницу оплаты ЮKassa
         return;
@@ -1845,6 +1849,9 @@ export default function JyotishApp() {
       setBuying(false);
     }
   }, [refreshAccount]);
+  // Тизеры не покупают конкретный пакет напрямую (тарифов теперь несколько) — просто ведут на вкладку «Тарифы»,
+  // где человек выбирает нужный размер пакета сам.
+  const goToPricing = useCallback(() => setTab("pricing"), []);
 
   const chart1 = useBirthChart(person1, "chart_calculated");
   const chart2 = useBirthChart(person2, "partner_chart_calculated");
@@ -1951,13 +1958,13 @@ export default function JyotishApp() {
           </div>
           {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
           {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
-          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />}
+          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
         </div>
       )}
 
       {tab === "houses" && <HousesPanel details={chart1.details} />}
 
-      {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />}
+      {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
 
       {tab === "synastry" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1998,12 +2005,12 @@ export default function JyotishApp() {
                   text="Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Проверка с другими данными рождения — 1 запрос из пакета."
                   goalName="paywall_compat_hit"
                   account={account}
-                  onBuyPackage={buyPackage}
+                  onGoToPricing={goToPricing}
                   packageInfo={packageInfo}
                   buying={buying}
                 />
               )}
-              <MatchResult data={matchState.data} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />
+              <MatchResult data={matchState.data} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />
             </>
           ) : (
             <HeuristicMatch kind={matchKind} items={heuristicItems} />
@@ -2012,7 +2019,7 @@ export default function JyotishApp() {
       )}
 
       {tab === "relocation" && (
-        <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />
+        <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />
       )}
 
       {tab === "pricing" && (

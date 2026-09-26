@@ -26,7 +26,3 @@ services:
         sync: false
       - key: PAYMENT_RETURN_URL
         sync: false
-      - key: PACKAGE_QUOTA
-        value: 25
-      - key: PACKAGE_PRICE_KOPEKS
-        value: 69000

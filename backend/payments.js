@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { pool, dbEnabled } from "./db.js";
-import { PACKAGE_QUOTA, PACKAGE_PRICE_KOPEKS } from "./usage.js";
+import { PACKAGE_TIERS, findTier } from "./usage.js";
 
 const SHOP_ID = process.env.YOOKASSA_SHOP_ID;
 const SECRET_KEY = process.env.YOOKASSA_SECRET_KEY;
@@ -18,9 +18,12 @@ export async function createPayment(req, res) {
   if (!dbEnabled()) return res.status(503).json({ error: "accounts_disabled" });
   if (!req.user) return res.status(401).json({ error: "not_logged_in" });
 
+  const tier = findTier(req.body?.tierId);
+  if (!tier) return res.status(400).json({ error: "invalid_tier", message: "Неизвестный пакет." });
+
   const pkgRes = await pool.query(
     `INSERT INTO packages (user_id, quota, price_kopeks, status) VALUES ($1,$2,$3,'pending') RETURNING id`,
-    [req.user.id, PACKAGE_QUOTA, PACKAGE_PRICE_KOPEKS]
+    [req.user.id, tier.quota, tier.priceKopeks]
   );
   const packageId = pkgRes.rows[0].id;
 
@@ -37,18 +40,18 @@ export async function createPayment(req, res) {
 
   const idempotenceKey = crypto.randomUUID();
   const payload = {
-    amount: { value: rub(PACKAGE_PRICE_KOPEKS), currency: "RUB" },
+    amount: { value: rub(tier.priceKopeks), currency: "RUB" },
     capture: true,
     confirmation: { type: "redirect", return_url: RETURN_URL },
-    description: `Пакет ${PACKAGE_QUOTA} запросов — Ведическая астрология`,
+    description: `Пакет ${tier.quota} запросов — Ведическая астрология`,
     metadata: { packageId: String(packageId), userId: String(req.user.id) },
     receipt: {
       customer: { email: req.user.email },
       items: [
         {
-          description: `Пакет из ${PACKAGE_QUOTA} расширенных запросов`,
+          description: `Пакет из ${tier.quota} расширенных запросов`,
           quantity: "1.00",
-          amount: { value: rub(PACKAGE_PRICE_KOPEKS), currency: "RUB" },
+          amount: { value: rub(tier.priceKopeks), currency: "RUB" },
           vat_code: "1",
           payment_subject: "service",
           payment_mode: "full_payment",
@@ -109,7 +112,7 @@ export async function webhook(req, res) {
 }
 
 export async function packageInfo(_req, res) {
-  res.json({ quota: PACKAGE_QUOTA, priceKopeks: PACKAGE_PRICE_KOPEKS });
+  res.json({ tiers: PACKAGE_TIERS });
 }
 
 export async function paymentStatus(req, res) {

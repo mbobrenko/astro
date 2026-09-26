@@ -1,8 +1,15 @@
 import { pool, dbEnabled } from "./db.js";
 
-export const PACKAGE_QUOTA = Number(process.env.PACKAGE_QUOTA || 25);
-// 690 ₽ по умолчанию — правится переменной окружения без деплоя кода.
-export const PACKAGE_PRICE_KOPEKS = Number(process.env.PACKAGE_PRICE_KOPEKS || 69000);
+// Три размера пакета. Правится прямо здесь (не через env) — тарифная сетка, а не секрет.
+export const PACKAGE_TIERS = [
+  { id: "p10", quota: 10, priceKopeks: 69000 },  // 690 ₽
+  { id: "p15", quota: 15, priceKopeks: 99000 },  // 990 ₽
+  { id: "p20", quota: 20, priceKopeks: 159000 }, // 1590 ₽
+];
+
+export function findTier(tierId) {
+  return PACKAGE_TIERS.find((t) => t.id === tierId) || null;
+}
 
 export async function getActivePackage(userId) {
   if (!dbEnabled()) return null;
