@@ -348,16 +348,17 @@ function PricingInfo() {
             <li>Полная карта, дома и сферы жизни</li>
             <li>Даша: махадаша и антардаша целиком</li>
             <li>Пратьянтардаша — для периода, активного сейчас</li>
-            <li>Семья и дети — целиком</li>
             <li>Подбор лучших мест по релокации (1 раз для одних данных рождения) + разбор одного выбранного города</li>
-            <li>Совместимость: общий балл и вердикт</li>
+            <li>Совместимость (Аштакута): первая проверка для пары — бесплатно</li>
           </ul>
         </div>
         <div>
           <div style={{ color: "#e8c46b", fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Полная версия (скоро)</div>
           <ul style={{ margin: 0, paddingLeft: 18, color: "#c9c4e8" }}>
+            <li>Семья и дети — целиком (дети, партнёр, лучшие периоды)</li>
             <li>Пратьянтардаша для всех периодов, не только текущего</li>
             <li>Разбор любого числа городов в релокации, пересчёт для других данных рождения</li>
+            <li>Повторная проверка совместимости с другими данными рождения</li>
             <li>Расшифровка слабых коотов совместимости — что именно значит каждый фактор</li>
           </ul>
           <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, fontStyle: "italic" }}>Цена и способ оплаты — уточняются.</div>
@@ -1085,87 +1086,22 @@ function FamilyPanel({ person, details, periods }) {
   if (!details?.As) {
     return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
   }
-  const rows = buildHouseRows(details);
-  const childrenA = assessDomain(DOMAIN_META.children, rows);
-  const childrenVm = HOUSE_VERDICT_META[childrenA.verdict];
-  const partnerA = assessPartner(rows, details);
-  const partnerVm = HOUSE_VERDICT_META[partnerA.verdict];
-
-  const scored = (periods || []).map((p) => {
-    const childrenScore = familyRowScore(p.lord, rows[4], details);
-    const partnerScore = familyRowScore(p.lord, rows[6], details);
-    return { ...p, childrenScore, partnerScore };
-  });
-  const bestChildren = scored.length ? scored.reduce((a, b) => (b.childrenScore > a.childrenScore ? b : a)) : null;
-  const bestPartner = scored.length ? scored.reduce((a, b) => (b.partnerScore > a.partnerScore ? b : a)) : null;
-
-  const scoreBadge = (score) => {
-    const v = familyScoreVerdict(score);
-    const m = HOUSE_VERDICT_META[v];
-    return <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 7px", borderRadius: 14, background: m.bg, color: m.color, whiteSpace: "nowrap" }}>{score > 0 ? "+" : ""}{score}</span>;
-  };
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
         В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего.
       </div>
-
-      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дети — 5 дом</div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: childrenVm.bg, color: childrenVm.color }}>{childrenVm.label}</span>
-        </div>
-        {childrenA.context.map((t, i) => (
-          <p key={i} style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>{t}</p>
-        ))}
-        {childrenA.pluses.map((t, i) => (
-          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
-        ))}
-        {[...childrenA.minuses, ...childrenA.watch].map((t, i) => (
-          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
-        ))}
-      </div>
-
-      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Партнёр — 7 дом и Юпитер (карака мужа)</div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: partnerVm.bg, color: partnerVm.color }}>{partnerVm.label}</span>
-        </div>
-        {partnerA.juTrait && (
-          <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>
-            Юпитер стоит в знаке {SIGNS[partnerA.juSign]} — по этому знаку в партнёре часто резонируют такие качества: {partnerA.juTrait}.
-          </p>
-        )}
-        {partnerA.pluses.map((t, i) => (
-          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
-        ))}
-        {partnerA.minuses.map((t, i) => (
-          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
-        ))}
-      </div>
-
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Лучшие периоды</div>
-        <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 10, lineHeight: 1.5 }}>
-          По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни.
-        </div>
-        {!periods && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Дождитесь загрузки периодов на вкладке «Периоды жизни».</div>}
-        {bestChildren && bestPartner && (
-          <div style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #2e2a5c" }}>
-            Для темы детей заметнее всего выглядит период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestChildren.lord]}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). Для партнёрства — период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestPartner.lord]}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).
-          </div>
-        )}
-        {scored.map((p, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "6px 0", borderTop: i ? "1px solid #2e2a5c" : "none" }}>
-            <span style={{ color: "#f1ede4" }}>{PLANET_NAMES[p.lord]}</span>
-            <span style={{ color: "#766fa0", fontSize: 11 }}>{p.start?.toISOString().slice(0, 10)} — {p.end?.toISOString().slice(0, 10)}</span>
-            <span style={{ display: "flex", gap: 6 }}>
-              <span title="Дети">Д {scoreBadge(p.childrenScore)}</span>
-              <span title="Партнёр">П {scoreBadge(p.partnerScore)}</span>
-            </span>
-          </div>
-        ))}
+        <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Дети, партнёр и лучшие периоды</div>
+        <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 4 }}>
+          Разбор темы детей (5 дом), партнёра через Юпитер как карака мужа, и оценка лучших периодов жизни для обеих тем.
+        </p>
+        <PaywallTeaser
+          title="Семья и дети — в полной версии"
+          text="Полный разбор доступен в полной версии."
+          goalName="paywall_family_hit"
+        />
       </div>
     </div>
   );
@@ -1612,20 +1548,36 @@ export default function JyotishApp() {
   const now = new Date();
   const activeMaha = dasha1.periods?.find((p) => p.start && p.end && now >= p.start && now < p.end);
 
-  const [matchState, setMatchState] = useState({ loading: false, error: null, data: null });
+  const [matchState, setMatchState] = useState({ loading: false, error: null, data: null, locked: false });
+  // Кэш первой бесплатной проверки совместимости — переживает переключение вкладок и перезагрузку страницы
+  // (та же история, что и с релокацией: без этого состояние жило бы только в памяти компонента).
+  const [matchCache, setMatchCache] = useState(() => loadSavedJSON("astro_match_cache", null));
+  useEffect(() => { saveSavedJSON("astro_match_cache", matchCache); }, [matchCache]);
+  const matchKey = `${person1.gender}|${person1.date}|${person1.time}|${person1.tz}|${person1.lat}|${person1.lon}|${person2.date}|${person2.time}|${person2.tz}|${person2.lat}|${person2.lon}`;
 
   const runMatch = useCallback(async () => {
-    setMatchState({ loading: true, error: null, data: null });
+    if (matchCache && matchCache.key === matchKey) {
+      // те же двое, что уже проверяли бесплатно — показываем сохранённый результат без нового запроса
+      setMatchState({ loading: false, error: null, data: matchCache.data, locked: false });
+      return;
+    }
+    if (matchCache && matchCache.key !== matchKey) {
+      // другая пара/другие данные — это уже вторая проверка, она за пейволлом
+      setMatchState({ loading: false, error: null, data: null, locked: true });
+      return;
+    }
+    setMatchState({ loading: true, error: null, data: null, locked: false });
     try {
       const male = person1.gender === "male" ? person1 : person2;
       const female = person1.gender === "female" ? person1 : person2;
       const data = await fetchMatchAshtakoot(splitBirthForApi(male), splitBirthForApi(female));
-      setMatchState({ loading: false, error: null, data });
+      setMatchState({ loading: false, error: null, data, locked: false });
+      setMatchCache({ key: matchKey, data });
       ymGoal("compat_marriage_calculated");
     } catch (e) {
-      setMatchState({ loading: false, error: e.message || "Не удалось рассчитать совместимость", data: null });
+      setMatchState({ loading: false, error: e.message || "Не удалось рассчитать совместимость", data: null, locked: false });
     }
-  }, [person1, person2]);
+  }, [person1, person2, matchCache, matchKey]);
 
   const heuristicItems = matchKind !== "marriage" ? heuristicCompat(matchKind, chart1, chart2) : null;
 
@@ -1726,6 +1678,13 @@ export default function JyotishApp() {
                 {matchState.loading ? "Считаю…" : "Рассчитать совместимость (Аштакута)"}
               </button>
               {matchState.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13, marginTop: 10 }}>Ошибка: {matchState.error}</div>}
+              {matchState.locked && (
+                <PaywallTeaser
+                  title="Первая проверка уже использована бесплатно"
+                  text="Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Чтобы проверить с другими данными рождения — полная версия."
+                  goalName="paywall_compat_hit"
+                />
+              )}
               <MatchResult data={matchState.data} />
             </>
           ) : (
