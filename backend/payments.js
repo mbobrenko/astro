@@ -108,6 +108,10 @@ export async function webhook(req, res) {
   }
 }
 
+export async function packageInfo(_req, res) {
+  res.json({ quota: PACKAGE_QUOTA, priceKopeks: PACKAGE_PRICE_KOPEKS });
+}
+
 export async function paymentStatus(req, res) {
   if (!dbEnabled()) return res.status(503).json({ error: "accounts_disabled" });
   if (!req.user) return res.status(401).json({ error: "not_logged_in" });

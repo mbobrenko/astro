@@ -7,6 +7,13 @@ import {
   fetchGeoDetails,
   fetchTimezone,
   fetchMatchAshtakoot,
+  requestLoginCode,
+  verifyLoginCode,
+  logoutAccount,
+  fetchAccountStatus,
+  checkUsage,
+  createPackagePayment,
+  fetchPackageInfo,
 } from "./api";
 import {
   SIGNS,
@@ -370,11 +377,13 @@ function PricingInfo() {
 
 /* Мягкий пейволл: пока без ссылки на оплату/контакт — просто показываем, что дальше есть платная часть,
    и считаем, сколько раз на неё реально натыкаются (goalName шлётся один раз при показе тизера). */
-function PaywallTeaser({ title, text, goalName }) {
+function PaywallTeaser({ title, text, goalName, account, onBuyPackage, packageInfo, buying }) {
   useEffect(() => {
     if (goalName) ymGoal(goalName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const canBuy = account?.loggedIn && onBuyPackage;
+  const priceLabel = packageInfo ? ` из ${packageInfo.quota} запросов — ${(packageInfo.priceKopeks / 100).toFixed(0)} ₽` : "";
   return (
     <div style={{
       marginTop: 10, padding: "12px 14px", borderRadius: 8,
@@ -382,7 +391,119 @@ function PaywallTeaser({ title, text, goalName }) {
     }}>
       <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 4 }}>🔒 {title}</div>
       <div style={{ fontSize: 11.5, color: "#c9c4e8", lineHeight: 1.5, marginBottom: 6 }}>{text}</div>
-      <div style={{ fontSize: 11, color: "#8b84b8", fontStyle: "italic" }}>Доступно в полной версии — скоро откроем</div>
+      {canBuy ? (
+        <button onClick={onBuyPackage} disabled={buying} style={{
+          background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "7px 14px",
+          fontSize: 12, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
+        }}>
+          {buying ? "Секунду…" : `Купить пакет${priceLabel}`}
+        </button>
+      ) : (
+        <div style={{ fontSize: 11, color: "#8b84b8", fontStyle: "italic" }}>
+          {account ? "Войдите и купите пакет на вкладке «Тарифы»" : "Доступно в полной версии — скоро откроем"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Вход по коду на email + статус пакета + кнопка покупки. Живёт на вкладке «Тарифы». */
+function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [stage, setStage] = useState("email"); // email | code
+  const [msg, setMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const priceLabel = packageInfo ? `${(packageInfo.priceKopeks / 100).toFixed(0)} ₽` : "…";
+  const quotaLabel = packageInfo ? packageInfo.quota : "…";
+
+  async function handleRequestCode(e) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      await requestLoginCode(email.trim());
+      setStage("code");
+      setMsg({ type: "ok", text: "Код отправлен на почту (действует 10 минут)." });
+    } catch (err) {
+      setMsg({ type: "err", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleVerify(e) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      await verifyLoginCode(email.trim(), code.trim());
+      setCode("");
+      setStage("email");
+      setMsg(null);
+      onLoggedIn();
+    } catch (err) {
+      setMsg({ type: "err", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLogout() {
+    await logoutAccount();
+    onLoggedIn();
+  }
+
+  if (account.loggedIn) {
+    return (
+      <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16, marginTop: 16, fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ fontSize: 13, color: "#c9c4e8" }}>Вы вошли как <b style={{ color: "#f1ede4" }}>{account.email}</b></div>
+          <button onClick={handleLogout} style={{ background: "none", border: "1px solid #332c66", color: "#8b84b8", borderRadius: 14, padding: "4px 12px", fontSize: 11, cursor: "pointer" }}>Выйти</button>
+        </div>
+        <div style={{ fontSize: 13, color: "#c9c4e8", marginTop: 10 }}>
+          {account.hasActivePackage
+            ? <>Остаток пакета: <b style={{ color: "#e8c46b" }}>{account.remaining}</b> из {account.totalQuota}</>
+            : account.totalQuota > 0
+              ? "Пакет полностью использован."
+              : "Пакет пока не куплен — семья и дети, повторная совместимость, доп. релокации и все пратьянтардаши остаются за пейволлом."}
+        </div>
+        <button onClick={onBuyPackage} disabled={buying} style={{
+          marginTop: 10, background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
+          padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
+        }}>
+          {buying ? "Секунду…" : `Купить пакет из ${quotaLabel} запросов — ${priceLabel}`}
+        </button>
+        {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16, marginTop: 16, fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Вход для покупки пакета</div>
+      {stage === "email" ? (
+        <form onSubmit={handleRequestCode} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="ваш email" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
+          <button type="submit" disabled={busy} style={{
+            background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "8px 16px",
+            fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer",
+          }}>{busy ? "…" : "Получить код"}</button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerify} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input required value={code} onChange={(e) => setCode(e.target.value)} placeholder="код из письма"
+            style={{ ...inputStyle, flex: 1, minWidth: 140 }} />
+          <button type="submit" disabled={busy} style={{
+            background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "8px 16px",
+            fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer",
+          }}>{busy ? "…" : "Войти"}</button>
+          <button type="button" onClick={() => { setStage("email"); setMsg(null); }} style={{
+            background: "none", border: "none", color: "#8b84b8", fontSize: 12, cursor: "pointer",
+          }}>← другой email</button>
+        </form>
+      )}
+      {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
     </div>
   );
 }
@@ -621,11 +742,29 @@ function PlanetTable({ details }) {
    UI: даша (маха → антар → пратьянтар)
    ========================================================= */
 
-function PratyantarList({ birth, mdEn, adEn, open, details, locked }) {
+function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onBuyPackage, packageInfo, buying }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
+  const [unlockedByPackage, setUnlockedByPackage] = useState(false);
+  const requestKey = `${mdEn}|${adEn}`;
+
+  // Период не активен сейчас (locked=true от родителя) — если у пользователя есть пакет,
+  // пробуем списать из него 1 "новый" запрос вместо жёсткого тизера.
+  useEffect(() => {
+    if (!open || !locked || unlockedByPackage || !account?.loggedIn) return;
+    let cancelled = false;
+    (async () => {
+      const res = await checkUsage("pratyantar", requestKey);
+      if (cancelled) return;
+      if (res?.allowed) setUnlockedByPackage(true);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, locked, account?.loggedIn, requestKey]);
+
+  const effectivelyLocked = locked && !unlockedByPackage;
 
   useEffect(() => {
-    if (!open || locked || state.subs || state.loading) return;
+    if (!open || effectivelyLocked || state.subs || state.loading) return;
     let cancelled = false;
     (async () => {
       setState((s) => ({ ...s, loading: true, error: null }));
@@ -640,15 +779,19 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked }) {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, locked]);
+  }, [open, effectivelyLocked]);
 
   if (!open) return null;
-  if (locked) {
+  if (effectivelyLocked) {
     return (
       <PaywallTeaser
         title="Пратьянтардаша — под-периоды"
-        text="Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — в полной версии."
+        text="Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — из пакета (1 запрос за период, повторный просмотр бесплатен)."
         goalName="paywall_pratyantar_hit"
+        account={account}
+        onBuyPackage={onBuyPackage}
+        packageInfo={packageInfo}
+        buying={buying}
       />
     );
   }
@@ -690,7 +833,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked }) {
   );
 }
 
-function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
+function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account, onBuyPackage, packageInfo, buying }) {
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [subOpen, setSubOpen] = useState(null);
 
@@ -750,7 +893,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
             }}>
               {isOpen ? "▾" : "▸"} под-периоды {PLANET_NAMES[code]} (пратьянтардаша, свои даты внутри этой антардаши)
             </div>
-            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} />
+            <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} account={account} onBuyPackage={onBuyPackage} packageInfo={packageInfo} buying={buying} />
           </div>
         );
       })}
@@ -758,7 +901,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details }) {
   );
 }
 
-function DashaTimeline({ birth, periods, details }) {
+function DashaTimeline({ birth, periods, details, account, onBuyPackage, packageInfo, buying }) {
   const now = new Date();
   const [openIdx, setOpenIdx] = useState(null);
 
@@ -815,7 +958,7 @@ function DashaTimeline({ birth, periods, details }) {
                 })()}
                 <div style={{ marginTop: 10 }}>
                   <b style={{ color: "#9089c9", fontSize: 12 }}>Антардаши (кликните — раскроется ещё и пратьянтардаша):</b>
-                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} />
+                  <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} account={account} onBuyPackage={onBuyPackage} packageInfo={packageInfo} buying={buying} />
                 </div>
               </div>
             )}
@@ -1064,7 +1207,7 @@ function assessPartner(rows, details) {
   return { pluses, minuses, verdict, juSign, juTrait, row7 };
 }
 
-function FamilyPanel({ person, details, periods }) {
+function FamilyPanel({ person, details, periods, account, onBuyPackage, packageInfo, buying }) {
   if (person.gender !== "female") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1087,21 +1230,117 @@ function FamilyPanel({ person, details, periods }) {
     return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
   }
 
+  const intro = (
+    <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+      В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего.
+    </div>
+  );
+
+  // Открыто целиком тем, кто хоть раз купил пакет (само по себе не тратит лимит запросов).
+  const unlocked = account?.loggedIn && account?.totalQuota > 0;
+
+  if (!unlocked) {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif" }}>
+        {intro}
+        <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Дети, партнёр и лучшие периоды</div>
+          <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 4 }}>
+            Разбор темы детей (5 дом), партнёра через Юпитер как карака мужа, и оценка лучших периодов жизни для обеих тем.
+          </p>
+          <PaywallTeaser
+            title="Семья и дети — в полной версии"
+            text="Открывается покупкой пакета (даёт доступ навсегда, независимо от остатка лимита на другие функции)."
+            goalName="paywall_family_hit"
+            account={account}
+            onBuyPackage={onBuyPackage}
+            packageInfo={packageInfo}
+            buying={buying}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const rows = buildHouseRows(details);
+  const childrenA = assessDomain(DOMAIN_META.children, rows);
+  const childrenVm = HOUSE_VERDICT_META[childrenA.verdict];
+  const partnerA = assessPartner(rows, details);
+  const partnerVm = HOUSE_VERDICT_META[partnerA.verdict];
+
+  const scored = (periods || []).map((p) => {
+    const childrenScore = familyRowScore(p.lord, rows[4], details);
+    const partnerScore = familyRowScore(p.lord, rows[6], details);
+    return { ...p, childrenScore, partnerScore };
+  });
+  const bestChildren = scored.length ? scored.reduce((a, b) => (b.childrenScore > a.childrenScore ? b : a)) : null;
+  const bestPartner = scored.length ? scored.reduce((a, b) => (b.partnerScore > a.partnerScore ? b : a)) : null;
+
+  const scoreBadge = (score) => {
+    const v = familyScoreVerdict(score);
+    const m = HOUSE_VERDICT_META[v];
+    return <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 7px", borderRadius: 14, background: m.bg, color: m.color, whiteSpace: "nowrap" }}>{score > 0 ? "+" : ""}{score}</span>;
+  };
+
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-        В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего.
+      {intro}
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дети — 5 дом</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: childrenVm.bg, color: childrenVm.color }}>{childrenVm.label}</span>
+        </div>
+        {childrenA.context.map((t, i) => (
+          <p key={i} style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>{t}</p>
+        ))}
+        {childrenA.pluses.map((t, i) => (
+          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+        ))}
+        {[...childrenA.minuses, ...childrenA.watch].map((t, i) => (
+          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+        ))}
       </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Партнёр — 7 дом и Юпитер (карака мужа)</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: partnerVm.bg, color: partnerVm.color }}>{partnerVm.label}</span>
+        </div>
+        {partnerA.juTrait && (
+          <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>
+            Юпитер стоит в знаке {SIGNS[partnerA.juSign]} — по этому знаку в партнёре часто резонируют такие качества: {partnerA.juTrait}.
+          </p>
+        )}
+        {partnerA.pluses.map((t, i) => (
+          <p key={`p${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+        ))}
+        {partnerA.minuses.map((t, i) => (
+          <p key={`m${i}`} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+        ))}
+      </div>
+
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-        <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Дети, партнёр и лучшие периоды</div>
-        <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 4 }}>
-          Разбор темы детей (5 дом), партнёра через Юпитер как карака мужа, и оценка лучших периодов жизни для обеих тем.
-        </p>
-        <PaywallTeaser
-          title="Семья и дети — в полной версии"
-          text="Полный разбор доступен в полной версии."
-          goalName="paywall_family_hit"
-        />
+        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Лучшие периоды</div>
+        <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 10, lineHeight: 1.5 }}>
+          По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни.
+        </div>
+        {!periods && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Дождитесь загрузки периодов на вкладке «Периоды жизни».</div>}
+        {bestChildren && bestPartner && (
+          <div style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #2e2a5c" }}>
+            Для темы детей заметнее всего выглядит период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestChildren.lord]}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). Для партнёрства — период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestPartner.lord]}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).
+          </div>
+        )}
+        {scored.map((p, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "6px 0", borderTop: i ? "1px solid #2e2a5c" : "none" }}>
+            <span style={{ color: "#f1ede4" }}>{PLANET_NAMES[p.lord]}</span>
+            <span style={{ color: "#766fa0", fontSize: 11 }}>{p.start?.toISOString().slice(0, 10)} — {p.end?.toISOString().slice(0, 10)}</span>
+            <span style={{ display: "flex", gap: 6 }}>
+              <span title="Дети">Д {scoreBadge(p.childrenScore)}</span>
+              <span title="Партнёр">П {scoreBadge(p.partnerScore)}</span>
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1111,7 +1350,7 @@ function FamilyPanel({ person, details, periods }) {
    UI: синастрия (брак / бизнес / дружба)
    ========================================================= */
 
-function MatchResult({ data }) {
+function MatchResult({ data, account, onBuyPackage, packageInfo, buying }) {
   if (!data) return null;
   const total = data.total || {};
   const conclusion = data.conclusion || {};
@@ -1162,7 +1401,7 @@ function MatchResult({ data }) {
         ) : (
           <PaywallTeaser
             title={`Найдено слабых факторов: ${weakKoots.length}`}
-            text="Что именно означает каждый слабый фактор и на что обратить внимание в паре — в полной версии."
+            text="Что именно означает каждый слабый фактор и на что обратить внимание в паре — эта расшифровка ещё в разработке, появится отдельно."
             goalName="paywall_koots_hit"
           />
         )}
@@ -1248,7 +1487,7 @@ function HeuristicMatch({ kind, items }) {
    UI: релокация
    ========================================================= */
 
-function RelocationPanel({ person, originalChart, activeMahaLord }) {
+function RelocationPanel({ person, originalChart, activeMahaLord, account, onBuyPackage, packageInfo, buying }) {
   const [status, setStatus] = useState(null);
   const [result, setResult] = useState(null);
   const [bestStatus, setBestStatus] = useState(null); // null | "loading" | "done"
@@ -1270,9 +1509,19 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
   const handlePick = useCallback(async (cand) => {
     const label = `${cand.place_name}${cand.country_code ? ", " + cand.country_code : ""}`;
     if (unlockedCity && unlockedCity !== label) {
-      setResult({ label, details: null });
-      setStatus("locked");
-      return;
+      if (account?.loggedIn) {
+        const usage = await checkUsage("relocation_city", label);
+        if (!usage.allowed) {
+          setResult({ label, details: null });
+          setStatus("locked");
+          return;
+        }
+        // пакет позволяет — считаем как обычно, ниже
+      } else {
+        setResult({ label, details: null });
+        setStatus("locked");
+        return;
+      }
     }
     if (unlockedCity && unlockedCity === label) {
       // тот же город, что уже открыт бесплатно — просто показываем, без нового запроса к API
@@ -1291,7 +1540,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     } catch (e) {
       setStatus("error");
     }
-  }, [person, unlockedCity]);
+  }, [person, unlockedCity, account]);
 
   const orig = originalChart?.details;
 
@@ -1306,8 +1555,17 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     }
     if (scanCache && scanCache.key !== scanKey) {
       // другие данные рождения или другая часть света — это уже новый платный запрос
-      setBestStatus("locked_scan");
-      return;
+      if (account?.loggedIn) {
+        const usage = await checkUsage("relocation_scan", scanKey);
+        if (!usage.allowed) {
+          setBestStatus("locked_scan");
+          return;
+        }
+        // пакет позволяет — продолжаем ниже и реально считаем новый подбор
+      } else {
+        setBestStatus("locked_scan");
+        return;
+      }
     }
     ymGoal("relocation_scan_started", { region, cities: poolCities.length });
     setBestStatus("loading");
@@ -1336,19 +1594,28 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
     setBestStatus("done");
     setScanCache({ key: scanKey, results: top });
     ymGoal("relocation_scan_completed", { region, found: found.length });
-  }, [orig, person, activeMahaLord, poolCities, region, scanKey, scanCache]);
+  }, [orig, person, activeMahaLord, poolCities, region, scanKey, scanCache, account]);
 
-  const openCityResult = useCallback((r) => {
+  const openCityResult = useCallback(async (r) => {
     const label = `${r.city.name}, ${r.city.country}`;
     if (unlockedCity && unlockedCity !== label) {
-      setResult({ label, details: null });
-      setStatus("locked");
-      return;
+      if (account?.loggedIn) {
+        const usage = await checkUsage("relocation_city", label);
+        if (!usage.allowed) {
+          setResult({ label, details: null });
+          setStatus("locked");
+          return;
+        }
+      } else {
+        setResult({ label, details: null });
+        setStatus("locked");
+        return;
+      }
     }
     setResult({ label, details: r.details });
     setStatus("ready");
     setUnlockedCity(label);
-  }, [unlockedCity]);
+  }, [unlockedCity, account]);
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1384,8 +1651,12 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
           {bestStatus === "locked_scan" && (
             <PaywallTeaser
               title="Подбор уже использован бесплатно"
-              text="Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Чтобы пересчитать для других данных рождения или другой части света — полная версия."
+              text="Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Пересчёт для других данных рождения или другой части света — 1 запрос из пакета."
               goalName="paywall_relocation_scan_hit"
+              account={account}
+              onBuyPackage={onBuyPackage}
+              packageInfo={packageInfo}
+              buying={buying}
             />
           )}
 
@@ -1423,8 +1694,12 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
           <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>Релокация в {result.label}</div>
           <PaywallTeaser
             title="Один город уже открыт бесплатно"
-            text={`Подробный разбор для «${unlockedCity}» остаётся доступен в любой момент. Чтобы посмотреть ещё один город — полная версия.`}
+            text={`Подробный разбор для «${unlockedCity}» остаётся доступен в любой момент. Ещё один город — 1 запрос из пакета.`}
             goalName="paywall_relocation_hit"
+            account={account}
+            onBuyPackage={onBuyPackage}
+            packageInfo={packageInfo}
+            buying={buying}
           />
         </div>
       )}
@@ -1541,6 +1816,36 @@ export default function JyotishApp() {
   useEffect(() => { saveSavedPerson("astro_person2", person2); }, [person2]);
   const [matchKind, setMatchKind] = useState("marriage"); // marriage | business | friendship
 
+  // Аккаунт (вход по email-коду) + пакет запросов — реальная, серверная часть пейволла.
+  // Без аккаунта всё работает как раньше (анонимный мягкий пейволл на localStorage).
+  const [account, setAccount] = useState({ loggedIn: false });
+  const [packageInfo, setPackageInfo] = useState(null);
+  const [buying, setBuying] = useState(false);
+
+  const refreshAccount = useCallback(async () => {
+    const s = await fetchAccountStatus();
+    setAccount(s);
+  }, []);
+  useEffect(() => { refreshAccount(); }, [refreshAccount]);
+  useEffect(() => { fetchPackageInfo().then(setPackageInfo); }, []);
+
+  const buyPackage = useCallback(async () => {
+    setBuying(true);
+    try {
+      const r = await createPackagePayment();
+      if (r.confirmationUrl) {
+        window.location.href = r.confirmationUrl; // редирект на страницу оплаты ЮKassa
+        return;
+      }
+      // Тестовый режим (ключи ЮKassa ещё не подключены на бэкенде) — пакет уже "оплачен", просто обновляем статус.
+      await refreshAccount();
+    } catch (e) {
+      alert(e.message || "Не удалось начать оплату. Попробуйте ещё раз.");
+    } finally {
+      setBuying(false);
+    }
+  }, [refreshAccount]);
+
   const chart1 = useBirthChart(person1, "chart_calculated");
   const chart2 = useBirthChart(person2, "partner_chart_calculated");
   const dasha1 = useMajorDasha(person1);
@@ -1562,9 +1867,18 @@ export default function JyotishApp() {
       return;
     }
     if (matchCache && matchCache.key !== matchKey) {
-      // другая пара/другие данные — это уже вторая проверка, она за пейволлом
-      setMatchState({ loading: false, error: null, data: null, locked: true });
-      return;
+      // другая пара/другие данные — это уже вторая проверка
+      if (account?.loggedIn) {
+        const usage = await checkUsage("compat", matchKey);
+        if (!usage.allowed) {
+          setMatchState({ loading: false, error: null, data: null, locked: true });
+          return;
+        }
+        // пакет позволяет — считаем как обычно, продолжаем ниже
+      } else {
+        setMatchState({ loading: false, error: null, data: null, locked: true });
+        return;
+      }
     }
     setMatchState({ loading: true, error: null, data: null, locked: false });
     try {
@@ -1577,7 +1891,7 @@ export default function JyotishApp() {
     } catch (e) {
       setMatchState({ loading: false, error: e.message || "Не удалось рассчитать совместимость", data: null, locked: false });
     }
-  }, [person1, person2, matchCache, matchKey]);
+  }, [person1, person2, matchCache, matchKey, account]);
 
   const heuristicItems = matchKind !== "marriage" ? heuristicCompat(matchKind, chart1, chart2) : null;
 
@@ -1637,13 +1951,13 @@ export default function JyotishApp() {
           </div>
           {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
           {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
-          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} />}
+          {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />}
         </div>
       )}
 
       {tab === "houses" && <HousesPanel details={chart1.details} />}
 
-      {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} />}
+      {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />}
 
       {tab === "synastry" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1681,11 +1995,15 @@ export default function JyotishApp() {
               {matchState.locked && (
                 <PaywallTeaser
                   title="Первая проверка уже использована бесплатно"
-                  text="Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Чтобы проверить с другими данными рождения — полная версия."
+                  text="Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Проверка с другими данными рождения — 1 запрос из пакета."
                   goalName="paywall_compat_hit"
+                  account={account}
+                  onBuyPackage={buyPackage}
+                  packageInfo={packageInfo}
+                  buying={buying}
                 />
               )}
-              <MatchResult data={matchState.data} />
+              <MatchResult data={matchState.data} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />
             </>
           ) : (
             <HeuristicMatch kind={matchKind} items={heuristicItems} />
@@ -1694,10 +2012,15 @@ export default function JyotishApp() {
       )}
 
       {tab === "relocation" && (
-        <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} />
+        <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} account={account} onBuyPackage={buyPackage} packageInfo={packageInfo} buying={buying} />
       )}
 
-      {tab === "pricing" && <PricingInfo />}
+      {tab === "pricing" && (
+        <>
+          <PricingInfo />
+          <AccountWidget account={account} packageInfo={packageInfo} onLoggedIn={refreshAccount} onBuyPackage={buyPackage} buying={buying} />
+        </>
+      )}
     </div>
   );
 }

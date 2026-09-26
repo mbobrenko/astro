@@ -7,6 +7,7 @@ async function post(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include", // нужно для сессионной куки аккаунта (бэкенд на другом домене)
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -16,6 +17,33 @@ async function post(path, body) {
     throw new Error(message);
   }
   return data;
+}
+
+// "Тихий" вариант post — не бросает исключение при не-2xx, просто возвращает тело ответа как есть
+// (для проверок статуса/лимита, где "не вошёл"/"лимит исчерпан" — обычный, ожидаемый исход, а не ошибка).
+async function postQuiet(path, body) {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body ?? {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (e) {
+    return { ok: false, status: 0, error: "network_error", message: e.message };
+  }
+}
+
+async function getQuiet(path) {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (e) {
+    return { ok: false, status: 0, error: "network_error", message: e.message };
+  }
 }
 
 // birth: { day, month, year, hour, min, lat, lon, tzone } — все числа
@@ -79,4 +107,45 @@ export function fetchMatchAshtakoot(male, female) {
 
 export function fetchSubSubDasha(birth, mdPlanetEn, adPlanetEn) {
   return post(`/api/dasha/sub-sub/${mdPlanetEn.toLowerCase()}/${adPlanetEn.toLowerCase()}`, birthPayload(birth));
+}
+
+// --- Аккаунт: вход по коду на email, статус, лимит пакета, оплата ---
+
+export function requestLoginCode(email) {
+  return post("/api/auth/request-code", { email });
+}
+
+export function verifyLoginCode(email, code) {
+  return post("/api/auth/verify", { email, code });
+}
+
+export function logoutAccount() {
+  return postQuiet("/api/auth/logout", {});
+}
+
+// Не бросает исключение — "не вошёл"/сервер недоступен трактуются как { loggedIn: false }
+export async function fetchAccountStatus() {
+  const r = await getQuiet("/api/account/status");
+  if (!r.ok) return { loggedIn: false };
+  return r;
+}
+
+// kind: "pratyantar" | "compat" | "relocation_scan" | "relocation_city"
+// Возвращает { allowed, repeat, remaining } — при сетевой ошибке/не вошёл считаем allowed:false,
+// чтобы вызывающий код по умолчанию показывал тизер, а не тихо разрешал лишнее.
+export async function checkUsage(kind, requestKey) {
+  const r = await postQuiet("/api/usage/check", { kind, requestKey });
+  if (!r.ok) return { allowed: false, repeat: false, remaining: 0, reason: r.error || "not_logged_in" };
+  return r;
+}
+
+export function createPackagePayment() {
+  return post("/api/pay/create", {});
+}
+
+// Не бросает исключение — используется для показа цены/размера пакета до входа
+export async function fetchPackageInfo() {
+  const r = await getQuiet("/api/pay/info");
+  if (!r.ok) return null;
+  return { quota: r.quota, priceKopeks: r.priceKopeks };
 }

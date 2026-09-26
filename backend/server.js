@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import { migrate } from "./db.js";
 import { requestCode, verifyCode, logout, attachUser } from "./auth.js";
 import { checkUsageHandler, accountStatusHandler } from "./usage.js";
-import { createPayment, webhook, paymentStatus } from "./payments.js";
+import { createPayment, webhook, paymentStatus, packageInfo } from "./payments.js";
 
 dotenv.config();
 
@@ -93,6 +93,7 @@ app.get("/api/account/status", accountStatusHandler);
 app.post("/api/usage/check", checkUsageHandler);
 
 // --- Оплата пакета через ЮKassa ---
+app.get("/api/pay/info", packageInfo);
 app.post("/api/pay/create", createPayment);
 app.post("/api/pay/webhook", webhook);
 app.get("/api/pay/status/:id", paymentStatus);
