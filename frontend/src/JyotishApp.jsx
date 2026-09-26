@@ -1319,8 +1319,14 @@ function RelocationPanel({ person, originalChart, activeMahaLord }) {
   const [bestProgress, setBestProgress] = useState(0);
   const [bestResults, setBestResults] = useState(null);
   const [region, setRegion] = useState("all");
-  const [unlockedCity, setUnlockedCity] = useState(null); // ярлык единственного города, открытого бесплатно
-  const [scanCache, setScanCache] = useState(null); // { key, results } — последний бесплатный подбор
+  // Открытый город и кэш подбора хранятся в localStorage (не только в состоянии компонента),
+  // иначе они сбрасывались при каждом переключении вкладки — RelocationPanel размонтируется,
+  // когда tab !== "relocation", и обычный useState(null) терял бы блокировку пейволла.
+  const [unlockedCity, setUnlockedCity] = useState(() => loadSavedJSON("astro_relocation_unlocked_city", null)); // ярлык единственного города, открытого бесплатно
+  const [scanCache, setScanCache] = useState(() => loadSavedJSON("astro_relocation_scan_cache", null)); // { key, results } — последний бесплатный подбор
+
+  useEffect(() => { saveSavedJSON("astro_relocation_unlocked_city", unlockedCity); }, [unlockedCity]);
+  useEffect(() => { saveSavedJSON("astro_relocation_scan_cache", scanCache); }, [scanCache]);
 
   const poolCities = region === "all" ? CANDIDATE_CITIES : CANDIDATE_CITIES.filter((c) => c.region === region);
   const scanKey = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}|${region}`;
@@ -1553,6 +1559,24 @@ const defaultPerson2 = { name: "Профиль 2", gender: "female", date: "1992
 
 // Запоминаем последние введённые данные рождения в этом браузере, чтобы они не терялись
 // при обновлении страницы или между визитами (сервер их не хранит и не видит).
+function loadSavedJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+function saveSavedJSON(key, value) {
+  try {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // localStorage недоступен (приватный режим и т.п.) — просто не сохраняем
+  }
+}
+
 function loadSavedPerson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
