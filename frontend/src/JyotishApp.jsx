@@ -21,6 +21,8 @@ import {
   signLordOf,
   relation,
   RELATION_LABEL,
+  RELATION_COLOR,
+  RELATION_BADGE_SHORT,
   elementOf,
   elementCompat,
   elementRu,
@@ -81,6 +83,25 @@ const NAK_ALIASES = {
 const PLANET_EN_TO_CODE = { Sun: "Su", Moon: "Mo", Mars: "Ma", Mercury: "Me", Jupiter: "Ju", Venus: "Ve", Saturn: "Sa", Rahu: "Ra", Ketu: "Ke" };
 const PLANET_NAMES = { Su: "Солнце", Mo: "Луна", Ma: "Марс", Me: "Меркурий", Ju: "Юпитер", Ve: "Венера", Sa: "Сатурн", Ra: "Раху", Ke: "Кету", As: "Асцендент" };
 const PLANET_ORDER = ["Su", "Mo", "Ma", "Me", "Ju", "Ve", "Sa", "Ra", "Ke"];
+
+// Цвет и классический астрологический символ планеты — для цветного выделения в карте и таблицах
+const PLANET_COLOR = { Su: "#f5a623", Mo: "#cfe8ff", Ma: "#ff6b6b", Me: "#7ee6b0", Ju: "#ffd166", Ve: "#ff9fd6", Sa: "#8fa3c9", Ra: "#b28ae0", Ke: "#a9a9b8", As: "#e8c46b" };
+const PLANET_ICON = { Su: "\u2609", Mo: "\u263D", Ma: "\u2642", Me: "\u263F", Ju: "\u2643", Ve: "\u2640", Sa: "\u2644", Ra: "\u260A", Ke: "\u260B" };
+
+// Компактная цветная плашка "друг / враг / нейтрально / свой период" для таблиц дашы —
+// одно и то же по всем трём уровням (маха / антар / пратьянтар), чтобы было видно с первого взгляда.
+function RelationBadge({ rel }) {
+  if (!rel) return null;
+  const color = RELATION_COLOR[rel] || RELATION_COLOR.neutral;
+  const label = RELATION_BADGE_SHORT[rel] || rel;
+  return (
+    <span style={{
+      fontSize: 9.5, fontWeight: 700, color, background: `${color}22`,
+      border: `1px solid ${color}66`, borderRadius: 8, padding: "1px 6px",
+      textTransform: "uppercase", letterSpacing: 0.3, whiteSpace: "nowrap",
+    }}>{label}</span>
+  );
+}
 
 const DASHA_TEXTS = {
   Su: { strengths: "Период укрепления авторитета, самостоятельности, видимости — хорошее время заявлять о себе, брать ответственность.", caution: "Избегайте излишней гордыни и конфликтов с руководством/отцовскими фигурами.", comm: "Общайтесь прямо и по существу, с людьми, облечёнными властью — уважительно, но без заискивания." },
@@ -264,7 +285,7 @@ function dashaComboParts(mahaCode, antarCode, details) {
   const aspectText = aspect
     ? `Натально ${PLANET_NAMES[antarCode]} стоит в ${aspect.house} доме (${HOUSE_MEANINGS[aspect.house]})${aspect.domains.length ? ` — тема периода сильнее всего скажется на: «${aspect.domains.join("», «")}»` : ""}.`
     : "";
-  return { relationText, strengths: a.strengths, caution: a.caution, aspectText };
+  return { relationText, strengths: a.strengths, caution: a.caution, aspectText, rel };
 }
 
 // То же самое, но для пратьянтардаши (3-й уровень) — короткая формула «+ / −» на каждый
@@ -602,12 +623,27 @@ function ChartWheel({ details }) {
             <>
               <div style={{ fontSize: 10, color: "#9089c9", letterSpacing: 0.4 }}>{SIGNS[sign]}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                {(cells[sign] || []).map((p) => (
-                  <span key={p} style={{
-                    fontSize: 12, fontWeight: 600, color: p === "As" ? "#e8c46b" : "#f1ede4",
-                    background: p === "As" ? "transparent" : "#332c66", padding: p === "As" ? 0 : "1px 5px", borderRadius: 3,
-                  }}>{p}{details[p]?.retro ? "℞" : ""}</span>
-                ))}
+                {(cells[sign] || []).map((p) => {
+                  if (p === "As") {
+                    return (
+                      <span key={p} title="Асцендент" style={{
+                        fontSize: 12, fontWeight: 700, color: "#151233", background: "#e8c46b",
+                        padding: "1px 6px", borderRadius: 10,
+                      }}>As</span>
+                    );
+                  }
+                  const color = PLANET_COLOR[p] || "#f1ede4";
+                  return (
+                    <span key={p} title={PLANET_NAMES[p]} style={{
+                      fontSize: 12, fontWeight: 700, color, background: `${color}26`,
+                      border: `1px solid ${color}66`, padding: "1px 6px 1px 5px", borderRadius: 10,
+                      display: "inline-flex", alignItems: "center", gap: 3,
+                    }}>
+                      <span style={{ fontSize: 13, lineHeight: 1 }}>{PLANET_ICON[p]}</span>
+                      {p}{details[p]?.retro ? "℞" : ""}
+                    </span>
+                  );
+                })}
               </div>
             </>
           )}
@@ -733,7 +769,7 @@ function PlanetTable({ details }) {
           if (!v) return null;
           return (
             <tr key={k} style={{ borderTop: "1px solid #2e2a5c" }}>
-              <td style={{ padding: 6, color: "#f1ede4" }}>{PLANET_NAMES[k]}{v.retro ? " ℞" : ""}</td>
+              <td style={{ padding: 6, color: PLANET_COLOR[k] || "#f1ede4", fontWeight: 600 }}>{PLANET_ICON[k] ? PLANET_ICON[k] + " " : ""}{PLANET_NAMES[k]}{v.retro ? " ℞" : ""}</td>
               <td style={{ color: "#c9c4e8" }}>{v.signName}</td>
               <td style={{ color: "#c9c4e8" }}>{v.nakName}</td>
               <td style={{ color: "#c9c4e8" }}>{v.pada}</td>
@@ -825,7 +861,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
             background: active ? "#211c47" : "transparent",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", color: active ? "#e8c46b" : "#c9c4e8", fontWeight: 600 }}>
-              <span>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet} · {RELATION_LABEL[rel]}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet}<RelationBadge rel={rel} /></span>
               <span style={{ fontWeight: 400, color: "#766fa0" }}>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
             </div>
             {parts && (
@@ -879,13 +915,14 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
         const code = PLANET_EN_TO_CODE[s.planet] || s.planet;
         const isOpen = subOpen === si;
         const parts = dashaComboParts(mahaCode, code, details);
+        const rel = parts?.rel || relation(mahaCode, code);
         return (
           <div key={si}>
             <div onClick={() => setSubOpen(isOpen ? null : si)} style={{
               display: "flex", justifyContent: "space-between", fontSize: 12, cursor: "pointer",
               color: subActive ? "#e8c46b" : "#8b84b8", padding: "2px 0",
             }}>
-              <span>{subActive ? "→ " : ""}{PLANET_NAMES[code] || s.planet}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{subActive ? "→ " : ""}{PLANET_NAMES[code] || s.planet}<RelationBadge rel={rel} /></span>
               <span>{start?.toISOString().slice(0, 10)} — {end?.toISOString().slice(0, 10)}</span>
             </div>
             {parts && (
@@ -913,6 +950,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
 function DashaTimeline({ birth, periods, details, account, onGoToPricing, packageInfo, buying }) {
   const now = new Date();
   const [openIdx, setOpenIdx] = useState(null);
+  const lagnaLord = details?.As?.sign != null ? signLordOf(details.As.sign) : null;
 
   return (
     <div>
@@ -940,8 +978,9 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
             <div onClick={() => setOpenIdx(openIdx === i ? null : i)} style={{
               padding: "10px 14px", display: "flex", justifyContent: "space-between", cursor: "pointer",
             }}>
-              <span style={{ color: active ? "#e8c46b" : "#f1ede4", fontWeight: 600 }}>
+              <span style={{ color: active ? "#e8c46b" : "#f1ede4", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
                 {active ? "● " : ""}Махадаша {PLANET_NAMES[p.lord] || p.planetEn}
+                <RelationBadge rel={lagnaLord ? relation(lagnaLord, p.lord) : null} />
               </span>
               <span style={{ color: "#9089c9", fontSize: 13 }}>
                 {p.start?.toISOString().slice(0, 10)} — {p.end?.toISOString().slice(0, 10)}

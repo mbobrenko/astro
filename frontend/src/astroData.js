@@ -33,6 +33,11 @@ export function relation(a, b) {
 }
 export const RELATION_LABEL = { same: "усиление своей же темы", friend: "дружественная поддержка", neutral: "нейтральный фон", enemy: "внутреннее трение" };
 
+// Цвет и короткая подпись для бейджа "друг / враг / нейтрально" в таблицах периодов —
+// то же деление, что RELATION_LABEL, но компактно, для цветной плашки, а не предложения.
+export const RELATION_COLOR = { same: "#e8c46b", friend: "#7fd99a", neutral: "#9089c9", enemy: "#e0a8a8" };
+export const RELATION_BADGE_SHORT = { same: "свой период", friend: "друг", neutral: "нейтрально", enemy: "враг" };
+
 // Стихия и модальность знака (индекс 0=Овен..11=Рыбы)
 const ELEMENTS = ["fire", "earth", "air", "water"];
 export function elementOf(signIdx) { return ELEMENTS[((signIdx % 12) + 12) % 12 % 4]; }
