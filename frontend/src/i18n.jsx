@@ -16,6 +16,7 @@ export const STRINGS = {
     tab_synastry: "Совместимость",
     tab_relocation: "Релокация",
     tab_pricing: "Тарифы",
+    tab_rectify: "Ректификация",
 
     form_name: "Имя",
     form_gender: "Пол (для совместимости)",
@@ -49,6 +50,7 @@ export const STRINGS = {
     pricing_paid_pratyantar: "Пратьянтардаша для всех периодов, не только текущего — 1 запрос за период",
     pricing_paid_relocation: "Разбор дополнительных городов и повторный подбор в релокации — 1 запрос за штуку",
     pricing_paid_compat: "Повторная проверка совместимости с другими данными рождения — 1 запрос",
+    pricing_paid_rectify: "Ректификация — уточнение неизвестного времени рождения по известным событиям, 1 запрос за расчёт",
 
     account_login_title: "Вход для покупки пакета",
     account_email_placeholder: "ваш email",
@@ -79,6 +81,7 @@ export const STRINGS = {
     tab_synastry: "Compatibility",
     tab_relocation: "Relocation",
     tab_pricing: "Pricing",
+    tab_rectify: "Rectification",
 
     form_name: "Name",
     form_gender: "Gender (for compatibility)",
@@ -112,6 +115,7 @@ export const STRINGS = {
     pricing_paid_pratyantar: "Pratyantardasha for every period, not just the current one — 1 request per period",
     pricing_paid_relocation: "Extra city analysis and repeat relocation search — 1 request each",
     pricing_paid_compat: "Repeat compatibility check with different birth data — 1 request",
+    pricing_paid_rectify: "Rectification — narrowing down an uncertain birth time from known life events, 1 request per calculation",
 
     account_login_title: "Sign in to buy a package",
     account_email_placeholder: "your email",

@@ -389,6 +389,7 @@ function PricingInfo() {
             <li>{t("pricing_paid_pratyantar")}</li>
             <li>{t("pricing_paid_relocation")}</li>
             <li>{t("pricing_paid_compat")}</li>
+            <li>{t("pricing_paid_rectify")}</li>
           </ul>
           <div style={{ fontSize: 12, color: "#c9c4e8", marginTop: 10, lineHeight: 1.6 }}>
             {t("pricing_tiers_line")}
@@ -1855,6 +1856,319 @@ function saveSavedPerson(key, person) {
   }
 }
 
+// Типы событий для ректификации — дом, который проверяется на резонанс с текущей
+// дашой на дату события (классические карaки/дома для каждого типа событий).
+const EVENT_TYPES = [
+  { id: "marriage", label: "Брак / отношения", house: 7 },
+  { id: "child", label: "Рождение ребёнка", house: 5 },
+  { id: "career", label: "Карьера / статус", house: 10 },
+  { id: "relocation", label: "Переезд", house: 4 },
+  { id: "health", label: "Здоровье / кризис", house: 8 },
+  { id: "loss", label: "Утрата близкого", house: 8 },
+  { id: "education", label: "Образование", house: 9 },
+];
+
+function buildCandidateTimes(fromTime, toTime, stepMin) {
+  const toMin = (t) => { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+  const toStr = (min) => { const h = Math.floor(min / 60) % 24; const m = ((min % 60) + 60) % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; };
+  const start = toMin(fromTime);
+  const end = toMin(toTime);
+  if (!(end > start)) return [];
+  const step = Math.max(5, Number(stepMin) || 20);
+  const times = [];
+  for (let m = start; m <= end; m += step) times.push(toStr(m));
+  if (times[times.length - 1] !== toStr(end)) times.push(toStr(end));
+  return times.slice(0, 15); // жёсткий предел — не больше 15 запросов /planets за один расчёт
+}
+
+/* =========================================================
+   UI: ректификация (уточнение времени рождения по событиям)
+   ========================================================= */
+
+/* Инструмент для астролога, а не для автоматического "угадывания" за клиента: показывает,
+   у какого кандидата на время рождения дашa на дату известного события резонирует с домом
+   этого события (владение/присутствие в доме) — метод, а не готовый ответ. Финальный выбор
+   времени остаётся за астрологом. Один расчёт = 1 запрос из пакета (несколько кандидатов —
+   несколько обращений к AstrologyAPI внутри одного "запроса" пакета, отсюда лимит в 15 кандидатов). */
+function RectificationPanel({ person, account, onGoToPricing, packageInfo, buying }) {
+  const [date, setDate] = useState(person?.date || "");
+  const [fromTime, setFromTime] = useState("12:00");
+  const [toTime, setToTime] = useState("14:00");
+  const [stepMin, setStepMin] = useState(20);
+  const [lat, setLat] = useState(person?.lat ?? "");
+  const [lon, setLon] = useState(person?.lon ?? "");
+  const [tz, setTz] = useState(person?.tz ?? "3");
+  const [events, setEvents] = useState([{ id: 1, type: "marriage", date: "", note: "" }]);
+  const [result, setResult] = useState({ loading: false, error: null, locked: false, candidates: null });
+
+  const prefillFromChart = useCallback(() => {
+    if (!person) return;
+    setDate(person.date || "");
+    setLat(person.lat ?? "");
+    setLon(person.lon ?? "");
+    setTz(person.tz ?? "3");
+  }, [person]);
+
+  const handlePick = useCallback(async (cand) => {
+    setLat(Number(cand.latitude));
+    setLon(Number(cand.longitude));
+    setTz(cand.tz);
+  }, []);
+
+  const addEvent = useCallback(() => {
+    setEvents((evs) => [...evs, { id: (evs[evs.length - 1]?.id || 0) + 1, type: "marriage", date: "", note: "" }]);
+  }, []);
+  const removeEvent = useCallback((id) => {
+    setEvents((evs) => evs.filter((e) => e.id !== id));
+  }, []);
+  const updateEvent = useCallback((id, patch) => {
+    setEvents((evs) => evs.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+
+  const times = buildCandidateTimes(fromTime, toTime, stepMin);
+  const validEvents = events.filter((e) => e.date);
+  const requestKey = JSON.stringify({ date, fromTime, toTime, stepMin, lat, lon, tz, events: validEvents.map((e) => ({ t: e.type, d: e.date })) });
+
+  const run = useCallback(async () => {
+    if (!date || lat === "" || lon === "" || !times.length) {
+      setResult({ loading: false, error: "Заполните дату, место и корректный диапазон времени («до» позже «от»).", locked: false, candidates: null });
+      return;
+    }
+    if (!validEvents.length) {
+      setResult({ loading: false, error: "Добавьте хотя бы одно событие с известной датой.", locked: false, candidates: null });
+      return;
+    }
+
+    if (!account?.loggedIn) {
+      setResult({ loading: false, error: null, locked: true, candidates: null });
+      return;
+    }
+    const usage = await checkUsage("rectify", requestKey);
+    if (!usage.allowed) {
+      setResult({ loading: false, error: null, locked: true, candidates: null });
+      return;
+    }
+
+    setResult({ loading: true, error: null, locked: false, candidates: null });
+    try {
+      const midTime = times[Math.floor((times.length - 1) / 2)];
+      const baseBirth = { date, time: midTime, lat, lon, tz };
+
+      const mahaRaw = await fetchMajorDasha(splitBirthForApi(baseBirth));
+      const mahaPeriods = (mahaRaw || []).map((p) => ({
+        lord: PLANET_EN_TO_CODE[p.planet] || p.planet,
+        planetEn: p.planet,
+        start: parseApiDashaDate(p.start),
+        end: parseApiDashaDate(p.end),
+      }));
+
+      const eventsWithMaha = validEvents.map((e) => {
+        const edate = new Date(e.date);
+        const period = mahaPeriods.find((p) => p.start && p.end && edate >= p.start && edate < p.end);
+        return { ...e, mahaLord: period?.lord || null, mahaPlanetEn: period?.planetEn || null };
+      });
+
+      const distinctMahaEn = [...new Set(eventsWithMaha.map((e) => e.mahaPlanetEn).filter(Boolean))];
+      const subCache = {};
+      for (const enName of distinctMahaEn) {
+        try {
+          const subs = await fetchSubDasha(splitBirthForApi(baseBirth), enName);
+          subCache[enName] = (subs || []).map((s) => ({
+            lord: PLANET_EN_TO_CODE[s.planet] || s.planet,
+            start: parseApiDashaDate(s.start),
+            end: parseApiDashaDate(s.end),
+          }));
+        } catch {
+          subCache[enName] = null;
+        }
+      }
+
+      const eventsResolved = eventsWithMaha.map((e) => {
+        let antarLord = null;
+        if (e.mahaPlanetEn && subCache[e.mahaPlanetEn]) {
+          const edate = new Date(e.date);
+          const sp = subCache[e.mahaPlanetEn].find((s) => s.start && s.end && edate >= s.start && edate < s.end);
+          antarLord = sp?.lord || null;
+        }
+        return { ...e, antarLord };
+      });
+
+      const candidates = [];
+      for (const time of times) {
+        try {
+          const birth = splitBirthForApi({ date, time, lat, lon, tz });
+          const planetsRes = await fetchPlanets(birth);
+          const details = buildChartDetails(planetsRes);
+          const rows = buildHouseRows(details);
+          let score = 0;
+          const breakdown = eventsResolved.map((e) => {
+            const meta = EVENT_TYPES.find((t) => t.id === e.type);
+            const row = meta && rows ? rows[meta.house - 1] : null;
+            let matched = null;
+            if (row) {
+              if (e.antarLord && (e.antarLord === row.lord || row.occupants.includes(e.antarLord))) {
+                score += 3; matched = "antar";
+              } else if (e.mahaLord && e.mahaLord !== e.antarLord && (e.mahaLord === row.lord || row.occupants.includes(e.mahaLord))) {
+                score += 1; matched = "maha";
+              }
+            }
+            return { type: e.type, date: e.date, house: meta?.house, matched };
+          });
+          candidates.push({ time, ascSign: details.As?.sign, ascDeg: details.As?.lon, score, breakdown, error: null });
+        } catch (e2) {
+          candidates.push({ time, error: e2.message || "Ошибка запроса", score: -1, breakdown: [] });
+        }
+      }
+      candidates.sort((a, b) => b.score - a.score);
+      setResult({ loading: false, error: null, locked: false, candidates });
+      ymGoal("rectify_calculated");
+    } catch (e) {
+      setResult({ loading: false, error: e.message || "Не удалось выполнить расчёт", locked: false, candidates: null });
+    }
+  }, [date, fromTime, toTime, stepMin, lat, lon, tz, events, account, requestKey, times, validEvents]);
+
+  const estimatedCalls = 1 + times.length; // fetchMajorDasha + N×fetchPlanets (fetchSubDasha по числу разных махадаш — заранее неизвестно, обычно 1-3)
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+        Инструмент для уточнения неизвестного времени рождения по известным жизненным событиям.
+        Для каждого времени-кандидата в выбранном диапазоне считается, совпадает ли планета,
+        управляющая дашой/антардашой на дату события, с домом, за который это событие обычно
+        отвечает (владение или присутствие в доме). Это метод-подсказка для профессионального
+        анализа, а не готовый ответ — финальный выбор времени остаётся за вами.
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дата и диапазон времени рождения</div>
+          {person && (
+            <button onClick={prefillFromChart} style={{
+              background: "none", border: "1px solid #332c66", color: "#9089c9", borderRadius: 14,
+              padding: "4px 10px", fontSize: 11, cursor: "pointer",
+            }}>заполнить из вкладки «Карта»</button>
+          )}
+        </div>
+        <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+          <div><span style={labelStyle}>Дата рождения</span><input style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div><span style={labelStyle}>От (примерно не раньше)</span><input style={inputStyle} type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} /></div>
+          <div><span style={labelStyle}>До (примерно не позже)</span><input style={inputStyle} type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} /></div>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <span style={labelStyle}>Шаг перебора, минут</span>
+          <input style={{ ...inputStyle, maxWidth: 120 }} type="number" min={5} step={5} value={stepMin} onChange={(e) => setStepMin(e.target.value)} />
+        </div>
+
+        <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(date)} />
+
+        <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          <div><span style={labelStyle}>Широта</span><input style={inputStyle} type="number" step="0.01" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
+          <div><span style={labelStyle}>Долгота</span><input style={inputStyle} type="number" step="0.01" value={lon} onChange={(e) => setLon(e.target.value)} /></div>
+          <div><span style={labelStyle}>Часовой пояс (UTC+)</span><input style={inputStyle} type="number" step="0.5" value={tz} onChange={(e) => setTz(e.target.value)} /></div>
+        </div>
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Известные события</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {events.map((e) => (
+            <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1.5fr auto", gap: 8, alignItems: "center" }}>
+              <select style={inputStyle} value={e.type} onChange={(ev) => updateEvent(e.id, { type: ev.target.value })}>
+                {EVENT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              <input style={inputStyle} type="date" value={e.date} onChange={(ev) => updateEvent(e.id, { date: ev.target.value })} />
+              <input style={inputStyle} placeholder="заметка (необязательно)" value={e.note} onChange={(ev) => updateEvent(e.id, { note: ev.target.value })} />
+              <button onClick={() => removeEvent(e.id)} style={{
+                background: "none", border: "1px solid #332c66", color: "#e0a8a8", borderRadius: 14,
+                width: 28, height: 28, cursor: "pointer", fontSize: 14,
+              }}>×</button>
+            </div>
+          ))}
+        </div>
+        <button onClick={addEvent} style={{
+          marginTop: 10, background: "none", border: "1px dashed #4a4088", color: "#9089c9",
+          borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer",
+        }}>+ добавить событие</button>
+      </div>
+
+      <div style={{ marginBottom: 10, fontSize: 11, color: "#6f6798" }}>
+        Кандидатов времени в диапазоне: {times.length || 0}. Один расчёт спишет 1 запрос из пакета
+        (внутри — до {estimatedCalls} обращений к AstrologyAPI, повтор с теми же данными — бесплатно).
+      </div>
+
+      <button onClick={run} disabled={result.loading} style={{
+        background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
+        padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: result.loading ? "default" : "pointer",
+        opacity: result.loading ? 0.7 : 1, marginBottom: 16,
+      }}>{result.loading ? "Считаю…" : "Рассчитать"}</button>
+
+      {result.error && <div style={{ color: "#e08b8b", fontSize: 13, marginBottom: 12 }}>{result.error}</div>}
+
+      {result.locked && (
+        <PaywallTeaser
+          title="Ректификация — уточнение времени рождения"
+          text="Расчёт по нескольким кандидатам времени задействует несколько обращений к AstrologyAPI, поэтому доступен из пакета запросов (1 запрос на расчёт, повтор с теми же данными — бесплатно)."
+          goalName="paywall_rectify_hit"
+          account={account}
+          onGoToPricing={onGoToPricing}
+          packageInfo={packageInfo}
+          buying={buying}
+        />
+      )}
+
+      {result.candidates && (
+        <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Результат по кандидатам</div>
+          <div style={{ fontSize: 10.5, color: "#766fa0", marginBottom: 10, lineHeight: 1.8, display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <span><span style={{ color: "#7fd99a" }}>●</span> антардаша владеет/стоит в нужном доме (вес 3)</span>
+            <span><span style={{ color: "#e8c46b" }}>●</span> совпадение только на уровне махадаши (вес 1)</span>
+            <span><span style={{ color: "#4a4570" }}>●</span> совпадения нет · буква в кружке — первая буква типа события</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: "#9089c9", textAlign: "left" }}>
+                  <th style={{ padding: 6 }}>Время</th>
+                  <th style={{ padding: 6 }}>Асцендент</th>
+                  <th style={{ padding: 6 }}>Сумма</th>
+                  <th style={{ padding: 6 }}>События</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.candidates.map((c, i) => (
+                  <tr key={c.time} style={{ borderTop: "1px solid #2e2a5c", background: i === 0 && !c.error ? "#211c47" : "transparent" }}>
+                    <td style={{ padding: 6, color: i === 0 && !c.error ? "#e8c46b" : "#f1ede4", fontWeight: i === 0 ? 700 : 400 }}>{c.time}</td>
+                    <td style={{ color: "#c9c4e8", padding: 6 }}>
+                      {c.error ? <span style={{ color: "#e08b8b" }}>{c.error}</span> : `${SIGNS[c.ascSign] || "—"} ${c.ascDeg != null ? Number(c.ascDeg).toFixed(1) + "°" : ""}`}
+                    </td>
+                    <td style={{ color: "#c9c4e8", padding: 6, fontWeight: 700 }}>{c.error ? "—" : c.score}</td>
+                    <td style={{ padding: 6 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {(c.breakdown || []).map((b, bi) => {
+                          const meta = EVENT_TYPES.find((t) => t.id === b.type);
+                          const color = b.matched === "antar" ? "#7fd99a" : b.matched === "maha" ? "#e8c46b" : "#4a4570";
+                          const verdict = b.matched === "antar" ? "антардаша владеет/стоит в доме" : b.matched === "maha" ? "махадаша владеет/стоит в доме" : "совпадения нет";
+                          return (
+                            <span key={bi} title={`${meta?.label || b.type} (${b.date}): ${verdict}`} style={{
+                              display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18,
+                              borderRadius: "50%", background: `${color}33`, border: `1px solid ${color}`,
+                              fontSize: 9, color, fontWeight: 700,
+                            }}>{(meta?.label || "?")[0]}</span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JyotishAppInner() {
   const { t, lang, setLang } = useLang();
   const [tab, setTab] = useState("chart");
@@ -1954,6 +2268,7 @@ function JyotishAppInner() {
     { id: "family", label: t("tab_family") },
     { id: "synastry", label: t("tab_synastry") },
     { id: "relocation", label: t("tab_relocation") },
+    { id: "rectify", label: t("tab_rectify") },
     { id: "pricing", label: t("tab_pricing") },
   ];
 
@@ -2070,6 +2385,10 @@ function JyotishAppInner() {
 
       {tab === "relocation" && (
         <RelocationPanel person={person1} originalChart={chart1} activeMahaLord={activeMaha?.lord} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />
+      )}
+
+      {tab === "rectify" && (
+        <RectificationPanel person={person1} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />
       )}
 
       {tab === "pricing" && (
