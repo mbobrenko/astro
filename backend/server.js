@@ -1,6 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import { migrate } from "./db.js";
+import { requestCode, verifyCode, logout, attachUser } from "./auth.js";
+import { checkUsageHandler, accountStatusHandler } from "./usage.js";
+import { createPayment, webhook, paymentStatus } from "./payments.js";
 
 dotenv.config();
 
@@ -20,8 +25,11 @@ app.use(express.json());
 app.use(
   cors({
     origin: ALLOWED_ORIGIN ? ALLOWED_ORIGIN.split(",") : true,
+    credentials: true, // нужно для сессионной куки входа (кросс-доменной — фронтенд и бэкенд на разных хостах)
   })
 );
+app.use(cookieParser());
+app.use(attachUser); // подтягивает req.user из сессии, если она есть; анонимных не блокирует
 
 /**
  * Проксирует запрос на json.astrologyapi.com, подставляя ключ на сервере.
@@ -75,6 +83,20 @@ function proxy(upstreamPathFn) {
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
+// --- Аккаунты: вход по одноразовому коду на email ---
+app.post("/api/auth/request-code", requestCode);
+app.post("/api/auth/verify", verifyCode);
+app.post("/api/auth/logout", logout);
+app.get("/api/account/status", accountStatusHandler);
+
+// --- Лимит платного пакета: фронтенд спрашивает разрешение перед "новым" (не кэшированным) запросом ---
+app.post("/api/usage/check", checkUsageHandler);
+
+// --- Оплата пакета через ЮKassa ---
+app.post("/api/pay/create", createPayment);
+app.post("/api/pay/webhook", webhook);
+app.get("/api/pay/status/:id", paymentStatus);
+
 // --- Геокодинг места рождения и исторический часовой пояс ---
 app.post("/api/geo", proxy(() => "geo_details"));
 app.post("/api/timezone", proxy(() => "timezone_with_dst"));
@@ -104,3 +126,5 @@ app.post("/api/match/percentage", proxy(() => "match_percentage"));
 app.listen(PORT, () => {
   console.log(`Astro backend слушает на http://localhost:${PORT}`);
 });
+
+migrate().catch((e) => console.error("Ошибка миграции БД:", e.message));
