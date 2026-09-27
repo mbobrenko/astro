@@ -37,6 +37,7 @@ export const RELATION_LABEL = { same: "усиление своей же темы
 // то же деление, что RELATION_LABEL, но компактно, для цветной плашки, а не предложения.
 export const RELATION_COLOR = { same: "#e8c46b", friend: "#7fd99a", neutral: "#9089c9", enemy: "#e0a8a8" };
 export const RELATION_BADGE_SHORT = { same: "свой период", friend: "друг", neutral: "нейтрально", enemy: "враг" };
+export const RELATION_BADGE_SHORT_EN = { same: "own period", friend: "friend", neutral: "neutral", enemy: "enemy" };
 
 // Стихия и модальность знака (индекс 0=Овен..11=Рыбы)
 const ELEMENTS = ["fire", "earth", "air", "water"];
@@ -44,26 +45,41 @@ export function elementOf(signIdx) { return ELEMENTS[((signIdx % 12) + 12) % 12 
 const ELEMENT_RU = { fire: "огонь", earth: "земля", air: "воздух", water: "вода" };
 export function elementRu(e) { return ELEMENT_RU[e]; }
 
+// Возвращает язык-нейтральный код вердикта ("high"/"good"/"tense"/"neutral"), а не готовую
+// русскую фразу — отображаемый текст на нужном языке даёт verdictLabel(code, lang) ниже.
+// Это нужно, чтобы один и тот же код можно было и показать (на русском или английском),
+// и использовать как ключ для цвета/группировки (TENSE_VERDICTS, VERDICT_COLOR).
 export function elementCompat(e1, e2) {
-  if (e1 === e2) return "высокая";
+  if (e1 === e2) return "high";
   const pair = [e1, e2].sort().join("-");
-  if (pair === "air-fire") return "хорошая";
-  if (pair === "earth-water") return "хорошая";
-  if (pair === "fire-water") return "напряжённая";
-  if (pair === "air-earth") return "напряжённая";
-  return "нейтральная";
+  if (pair === "air-fire") return "good";
+  if (pair === "earth-water") return "good";
+  if (pair === "fire-water") return "tense";
+  if (pair === "air-earth") return "tense";
+  return "neutral";
 }
 
 // Гана накшатры (классическое деление Дева/Мануша/Ракшаса), индекс 0..26 как в NAKSHATRAS
 const NAK_GANA = ["D","M","R","M","D","R","D","D","R","R","M","M","D","R","D","R","D","R","R","M","M","D","R","R","M","M","D"];
 export function ganaOf(nakIdx) { return NAK_GANA[nakIdx] ?? null; }
 export function ganaCompat(g1, g2) {
-  if (!g1 || !g2) return "неизвестна";
-  if (g1 === g2) return "высокая";
+  if (!g1 || !g2) return "unknown";
+  if (g1 === g2) return "high";
   const pair = [g1, g2].sort().join("");
-  if (pair === "DM") return "хорошая";
-  if (pair === "MR") return "средняя";
-  return "низкая"; // DR
+  if (pair === "DM") return "good";
+  if (pair === "MR") return "medium";
+  return "low"; // DR
+}
+
+// Отображаемая подпись для кода вердикта (high/good/medium/neutral/low/tense/unknown) —
+// один и тот же код из elementCompat/ganaCompat/heuristicCompat превращается в текст на
+// нужном языке здесь, а не хранится готовой фразой в самих функциях сравнения.
+export const VERDICT_LABEL = {
+  ru: { high: "высокая", good: "хорошая", medium: "средняя", neutral: "нейтральная", low: "низкая", tense: "напряжённая", unknown: "неизвестна" },
+  en: { high: "high", good: "good", medium: "medium", neutral: "neutral", low: "low", tense: "tense", unknown: "unknown" },
+};
+export function verdictLabel(code, lang) {
+  return (VERDICT_LABEL[lang] || VERDICT_LABEL.ru)[code] || code;
 }
 
 // Значения домов (от Асцендента, классические сигнификации)
@@ -81,6 +97,23 @@ export const HOUSE_MEANINGS = {
   11: "доходы, связи и сети, друзья, исполнение желаний",
   12: "потери, расходы, уединение, духовность, дальние страны",
 };
+export const HOUSE_MEANINGS_EN = {
+  1: "the body, character, vitality, how you present yourself",
+  2: "savings, family values, speech, movable possessions",
+  3: "initiative, effort, siblings, communication, short journeys",
+  4: "home, mother, emotional support, property, peace of mind",
+  5: "creativity, children, intellect, romance, speculative decisions",
+  6: "employment, health, competitors, debts, overcoming obstacles",
+  7: "partnership, marriage, business alliances, open deals",
+  8: "transformation, shared resources, crises, the hidden, longevity",
+  9: "destiny, fortune, father, mentors, higher education, dharma",
+  10: "career, social status, achievement, reputation",
+  11: "income, networks and connections, friends, fulfillment of wishes",
+  12: "losses, expenses, solitude, spirituality, foreign lands",
+};
+export function houseMeaning(h, lang) {
+  return (lang === "en" ? HOUSE_MEANINGS_EN : HOUSE_MEANINGS)[h];
+}
 
 // Короткая «суть» планеты — используется как строительный блок для текстов по домам/сферам
 export const PLANET_CORE = {
@@ -94,6 +127,20 @@ export const PLANET_CORE = {
   Ra: "нестандартные и рискованные ходы, одержимость целью",
   Ke: "отстранённость, узкая специализация, минимум социальной игры",
 };
+export const PLANET_CORE_EN = {
+  Su: "will and natural authority",
+  Mo: "emotional engagement and nurturing",
+  Ma: "initiative, drive, readiness to fight",
+  Me: "calculation, communication, trade and deals",
+  Ju: "growth, trust, broad reach, mentorship",
+  Ve: "aesthetics, partnership, diplomacy, enjoying the process",
+  Sa: "discipline, patience, playing the long game",
+  Ra: "unconventional and risky moves, obsession with a goal",
+  Ke: "detachment, narrow specialization, minimal social play",
+};
+export function planetCore(code, lang) {
+  return (lang === "en" ? PLANET_CORE_EN : PLANET_CORE)[code];
+}
 
 // Сферы жизни -> какие дома смотреть
 export const DOMAIN_META = {
@@ -103,6 +150,16 @@ export const DOMAIN_META = {
   fate: { title: "Судьба и предназначение", houses: [9, 10] },
   society: { title: "Общество и окружение", houses: [11, 7, 3] },
 };
+export const DOMAIN_META_EN_TITLES = {
+  business: "Business & career",
+  family: "Family & home",
+  children: "Children",
+  fate: "Destiny & purpose",
+  society: "Society & circle",
+};
+export function domainTitle(key, lang) {
+  return lang === "en" ? DOMAIN_META_EN_TITLES[key] : DOMAIN_META[key]?.title;
+}
 
 // Кураторский список городов для подбора благоприятной релокации — расширен на все
 // обитаемые континенты и регионы, включая менее очевидные места (Парагвай, Уругвай,
@@ -112,6 +169,21 @@ export const DOMAIN_META = {
 // осознанный компромисс между «весь земной шар» и тем, что можно реально пересчитать
 // по API за разумное время; region используется для фильтра по части света.
 export const REGIONS = ["Европа", "Ближний Восток и Кавказ", "Азия", "Африка", "Северная Америка", "Южная Америка", "Океания"];
+
+// Значения REGIONS остаются русскими ключами (используются как value для фильтрации CANDIDATE_CITIES),
+// а regionLabel() даёт им отображаемую подпись на нужном языке.
+export const REGION_LABELS_EN = {
+  "Европа": "Europe",
+  "Ближний Восток и Кавказ": "Middle East & Caucasus",
+  "Азия": "Asia",
+  "Африка": "Africa",
+  "Северная Америка": "North America",
+  "Южная Америка": "South America",
+  "Океания": "Oceania",
+};
+export function regionLabel(r, lang) {
+  return lang === "en" ? (REGION_LABELS_EN[r] || r) : r;
+}
 
 export const CANDIDATE_CITIES = [
   // Европа
@@ -195,6 +267,20 @@ export const PLANET_FOCUS_ADVICE = {
   Ra: "перепроверять факты и людей, не поддаваться эффекту «всё и сразу»",
   Ke: "не пускать сферу на самотёк из-за отстранённости — держать минимальный контроль",
 };
+export const PLANET_FOCUS_ADVICE_EN = {
+  Su: "give yourself more independence and visibility here — don't dissolve into someone else's script",
+  Mo: "don't decide on emotion — stabilize the routine first, then act",
+  Ma: "channel the drive into concrete action, not conflict and haste",
+  Me: "put agreements in writing — don't rely on verbal promises",
+  Ju: "double-check figures and deadlines — don't overestimate your reach",
+  Ve: "don't stall hard decisions for the sake of comfort — set clear boundaries",
+  Sa: "budget more time and patience — don't force the outcome",
+  Ra: "double-check facts and people — don't fall for the all-or-nothing pull",
+  Ke: "don't let the area drift from sheer detachment — keep a minimum of control",
+};
+export function planetFocusAdvice(code, lang) {
+  return (lang === "en" ? PLANET_FOCUS_ADVICE_EN : PLANET_FOCUS_ADVICE)[code];
+}
 
 // Эвристическая «сила» карты в конкретной точке: благоприятные планеты в сильных домах
 // (кендры/трикона 1,4,5,7,9,10) — плюс; трудные планеты там же — минус; трудные планеты,

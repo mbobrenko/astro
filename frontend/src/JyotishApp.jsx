@@ -40,6 +40,13 @@ import {
   NATURAL_MILD_BENEFICS,
   NATURAL_MALEFICS,
   PLANET_FOCUS_ADVICE,
+  RELATION_BADGE_SHORT_EN,
+  houseMeaning,
+  planetCore,
+  planetFocusAdvice,
+  domainTitle,
+  verdictLabel,
+  regionLabel,
 } from "./astroData";
 
 /* =========================================================
@@ -49,6 +56,9 @@ import {
 const EN_SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
 
 const NAKSHATRAS = ["Ашвини", "Бхарани", "Криттика", "Рохини", "Мригашира", "Ардра", "Пунарвасу", "Пушья", "Ашлеша", "Магха", "Пурва Пхалгуни", "Уттара Пхалгуни", "Хаста", "Читра", "Свати", "Вишакха", "Анурадха", "Джйештха", "Мула", "Пурва Ашадха", "Уттара Ашадха", "Шравана", "Дханишта", "Шатабхиша", "Пурва Бхадрапада", "Уттара Бхадрапада", "Ревати"];
+const NAKSHATRAS_EN = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"];
+function nakshatraName(idx, lang) { return idx == null ? "—" : (lang === "en" ? NAKSHATRAS_EN : NAKSHATRAS)[idx]; }
+function signName(idx, lang) { return idx == null ? "—" : (lang === "en" ? EN_SIGNS : SIGNS)[idx]; }
 
 const NAK_ALIASES = {
   ashwini: 0, aswini: 0,
@@ -82,6 +92,8 @@ const NAK_ALIASES = {
 
 const PLANET_EN_TO_CODE = { Sun: "Su", Moon: "Mo", Mars: "Ma", Mercury: "Me", Jupiter: "Ju", Venus: "Ve", Saturn: "Sa", Rahu: "Ra", Ketu: "Ke" };
 const PLANET_NAMES = { Su: "Солнце", Mo: "Луна", Ma: "Марс", Me: "Меркурий", Ju: "Юпитер", Ve: "Венера", Sa: "Сатурн", Ra: "Раху", Ke: "Кету", As: "Асцендент" };
+const PLANET_NAMES_EN = { Su: "Sun", Mo: "Moon", Ma: "Mars", Me: "Mercury", Ju: "Jupiter", Ve: "Venus", Sa: "Saturn", Ra: "Rahu", Ke: "Ketu", As: "Ascendant" };
+function planetName(code, lang) { return (lang === "en" ? PLANET_NAMES_EN : PLANET_NAMES)[code] || code; }
 const PLANET_ORDER = ["Su", "Mo", "Ma", "Me", "Ju", "Ve", "Sa", "Ra", "Ke"];
 
 // Цвет и классический астрологический символ планеты — для цветного выделения в карте и таблицах
@@ -91,9 +103,10 @@ const PLANET_ICON = { Su: "\u2609", Mo: "\u263D", Ma: "\u2642", Me: "\u263F", Ju
 // Компактная цветная плашка "друг / враг / нейтрально / свой период" для таблиц дашы —
 // одно и то же по всем трём уровням (маха / антар / пратьянтар), чтобы было видно с первого взгляда.
 function RelationBadge({ rel }) {
+  const { lang } = useLang();
   if (!rel) return null;
   const color = RELATION_COLOR[rel] || RELATION_COLOR.neutral;
-  const label = RELATION_BADGE_SHORT[rel] || rel;
+  const label = (lang === "en" ? RELATION_BADGE_SHORT_EN : RELATION_BADGE_SHORT)[rel] || rel;
   return (
     <span style={{
       fontSize: 9.5, fontWeight: 700, color, background: `${color}22`,
@@ -115,6 +128,19 @@ const DASHA_TEXTS = {
   Ke: { strengths: "Период внутреннего поиска, отпускания лишнего, духовной работы, специализации в узкой области.", caution: "Возможны ощущение потери направления, отстранённость, апатия к мирским делам.", comm: "Немногословность уместна; не форсируйте общение — период больше для внутренней работы, чем для внешней экспансии." },
 };
 
+const DASHA_TEXTS_EN = {
+  Su: { strengths: "A period of strengthening authority, independence, and visibility — a good time to assert yourself and take on responsibility.", caution: "Watch for excessive pride and conflicts with authority figures or father figures.", comm: "Communicate directly and to the point with people in positions of power — respectfully, but without currying favor." },
+  Mo: { strengths: "A time of emotional sensitivity, caregiving, and working on home and family — intuition sharpens.", caution: "Mood swings and excessive dependence on others' opinions are possible.", comm: "A gentle, empathetic tone works better than pressure; a good time for conversations with loved ones." },
+  Ma: { strengths: "Energy, initiative, the ability to act quickly and defend your boundaries.", caution: "Risk of impulsive decisions, conflicts, and injuries — keep irritability in check.", comm: "Short, concrete phrasing; avoid arguing on emotion, take a pause before responding." },
+  Me: { strengths: "An excellent period for learning, negotiations, paperwork, and communication projects.", caution: "Possible restlessness, scattered attention, and superficial decisions.", comm: "Argue logically and in a structured way; a good time for letters, presentations, and deals." },
+  Ju: { strengths: "A period of growth, luck, and expansion — favorable for education, mentorship, and finances.", caution: "Beware of excessive optimism and overestimating your own abilities.", comm: "An open, generous tone; a good time for talks with mentors and about long-term plans." },
+  Ve: { strengths: "Harmony in relationships, creativity, aesthetics, comfort — a strong period for partnership and art.", caution: "Possible tendency toward excess, self-indulgence, and postponing hard decisions.", comm: "A diplomatic, warm tone; a good time for romantic and creative negotiations." },
+  Sa: { strengths: "A period of discipline, structure, and long-term building — what you build now will be solid.", caution: "Possible delays, a sense of heaviness, tests of patience — don't force events.", comm: "A restrained, businesslike tone; keep your word and deadlines, avoid hasty promises." },
+  Ra: { strengths: "Unconventional opportunities, ambition, breakthroughs in new, unfamiliar areas.", caution: "Risk of illusions, obsession with a goal, deception — double-check facts.", comm: "Keep boundaries clearly stated, avoid vague agreements." },
+  Ke: { strengths: "A period of inner searching, letting go of the unnecessary, spiritual work, and narrow specialization.", caution: "Possible sense of losing direction, detachment, apathy toward worldly matters.", comm: "Being sparing with words is fitting — this period favors inner work over outward expansion." },
+};
+function dashaText(code, lang) { return (lang === "en" ? DASHA_TEXTS_EN : DASHA_TEXTS)[code]; }
+
 const SIGN_TRAITS = {
   0: "инициативность, прямота, лидерский импульс", 1: "устойчивость, практичность, любовь к комфорту",
   2: "любознательность, коммуникабельность, гибкость ума", 3: "чувствительность, забота, сильная привязанность к дому",
@@ -123,6 +149,16 @@ const SIGN_TRAITS = {
   8: "оптимизм, широта взглядов, тяга к смыслу", 9: "дисциплина, целеустремлённость, терпение",
   10: "независимость, оригинальность, социальная направленность", 11: "интуитивность, сострадание, склонность к мечтательности",
 };
+
+const SIGN_TRAITS_EN = {
+  0: "initiative, directness, a leadership impulse", 1: "steadiness, practicality, a love of comfort",
+  2: "curiosity, sociability, mental flexibility", 3: "sensitivity, caring, strong attachment to home",
+  4: "confidence, creative charisma, a need for recognition", 5: "an analytical mind, attention to detail, service",
+  6: "diplomacy, a drive for balance and partnership", 7: "depth, intensity, strategic thinking",
+  8: "optimism, breadth of outlook, a pull toward meaning", 9: "discipline, focus, patience",
+  10: "independence, originality, a social orientation", 11: "intuitiveness, compassion, a tendency to dream",
+};
+function signTraits(idx, lang) { return idx == null ? "" : (lang === "en" ? SIGN_TRAITS_EN : SIGN_TRAITS)[idx]; }
 
 const KOOT_LABELS = {
   varna: "Варна — духовная совместимость",
@@ -134,6 +170,17 @@ const KOOT_LABELS = {
   bhakut: "Бхакут — совместимость судеб",
   nadi: "Нади — потомство и здоровье рода",
 };
+const KOOT_LABELS_EN = {
+  varna: "Varna — spiritual compatibility",
+  vashya: "Vashya — mutual attraction and control",
+  tara: "Tara — health and well-being",
+  yoni: "Yoni — physical intimacy",
+  maitri: "Graha Maitri — friendship of minds",
+  gan: "Gana — temperament",
+  bhakut: "Bhakut — compatibility of destinies",
+  nadi: "Nadi — offspring and family health",
+};
+function kootLabel(key, lang) { return (lang === "en" ? KOOT_LABELS_EN : KOOT_LABELS)[key] || key; }
 const KOOT_ORDER = ["varna", "vashya", "tara", "yoni", "maitri", "gan", "bhakut", "nadi"];
 
 // Что практически значит низкий балл по конкретной коуте — обывательским языком,
@@ -254,12 +301,12 @@ function relocatedBirthFields(person, destLat, destLon, destTzone) {
 
 // В каком натальном доме стоит планета и какие сферы жизни (из DOMAIN_META) это затрагивает —
 // связывает периоды даши с уже посчитанными домами, а не только с классическими дружбами планет.
-function lifeAspectHouseDomain(code, details) {
+function lifeAspectHouseDomain(code, details, lang) {
   const house = details?.[code]?.house;
   if (!house) return null;
   const domains = Object.entries(DOMAIN_META)
     .filter(([, dm]) => dm.houses.includes(house))
-    .map(([, dm]) => dm.title);
+    .map(([key]) => domainTitle(key, lang));
   return { house, domains };
 }
 
@@ -273,17 +320,29 @@ const RELATION_COMBO_PHRASE = {
   enemy: (mn, an) => `${an} находится в напряжении с ${mn} — в этот отрезок времени возможен внутренний конфликт между темами двух планет, стоит быть внимательнее к своим реакциям.`,
 };
 
+const RELATION_COMBO_PHRASE_EN = {
+  same: (mn, an) => `The antardasha shares its planet with the mahadasha itself — the theme of ${an} plays out unobstructed, at full strength, without extra coloring from outside.`,
+  friend: (mn, an) => `${an} is friendly toward the main planet of the period (${mn}), so its theme unfolds easily, without inner resistance — both planets "pull" in a similar direction.`,
+  neutral: (mn, an) => `${an} is neutral toward ${mn} — the theme of this antardasha will play out on its own, neither amplified nor muted by the mahadasha's background.`,
+  enemy: (mn, an) => `${an} is in tension with ${mn} — during this stretch of time an inner conflict between the two planets' themes is possible, so it's worth paying closer attention to your own reactions.`,
+};
+function relationComboPhrase(lang) { return lang === "en" ? RELATION_COMBO_PHRASE_EN : RELATION_COMBO_PHRASE; }
+
 // Структурированный (а не слитный) разбор антардаши — тот же формат, что у махадаши
 // (сильные стороны / осторожно / сфера жизни), чтобы 2-й уровень не уступал 1-му в детальности.
-function dashaComboParts(mahaCode, antarCode, details) {
-  const a = DASHA_TEXTS[antarCode];
+function dashaComboParts(mahaCode, antarCode, details, lang) {
+  const a = dashaText(antarCode, lang);
   if (!a) return null;
   const rel = relation(mahaCode, antarCode);
-  const phraseFn = RELATION_COMBO_PHRASE[rel] || RELATION_COMBO_PHRASE.neutral;
-  const relationText = phraseFn(PLANET_NAMES[mahaCode], PLANET_NAMES[antarCode]);
-  const aspect = lifeAspectHouseDomain(antarCode, details);
+  const phrases = relationComboPhrase(lang);
+  const phraseFn = phrases[rel] || phrases.neutral;
+  const relationText = phraseFn(planetName(mahaCode, lang), planetName(antarCode, lang));
+  const aspect = lifeAspectHouseDomain(antarCode, details, lang);
+  const isEn = lang === "en";
   const aspectText = aspect
-    ? `Натально ${PLANET_NAMES[antarCode]} стоит в ${aspect.house} доме (${HOUSE_MEANINGS[aspect.house]})${aspect.domains.length ? ` — тема периода сильнее всего скажется на: «${aspect.domains.join("», «")}»` : ""}.`
+    ? (isEn
+      ? `Natally ${planetName(antarCode, lang)} sits in house ${aspect.house} (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — this period's theme will show up most in: "${aspect.domains.join('", "')}"` : ""}.`
+      : `Натально ${planetName(antarCode, lang)} стоит в ${aspect.house} доме (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — тема периода сильнее всего скажется на: «${aspect.domains.join("», «")}»` : ""}.`)
     : "";
   return { relationText, strengths: a.strengths, caution: a.caution, aspectText, rel };
 }
@@ -291,17 +350,22 @@ function dashaComboParts(mahaCode, antarCode, details) {
 // То же самое, но для пратьянтардаши (3-й уровень) — короткая формула «+ / −» на каждый
 // под-под-период, а не сплошной текст: плюс (сильная сторона), минус (на что обратить
 // внимание), и, если планета в напряжении с антардашой, — отдельная пометка об этом.
-function pratyantarComboParts(antarCode, code, details) {
+function pratyantarComboParts(antarCode, code, details, lang) {
   const rel = relation(antarCode, code);
-  const t = DASHA_TEXTS[code];
-  const plus = t ? t.strengths : (PLANET_CORE[code] || "");
+  const t = dashaText(code, lang);
+  const plus = t ? t.strengths : (planetCore(code, lang) || "");
   let minus = t ? t.caution : "";
+  const isEn = lang === "en";
   if (rel === "enemy") {
-    minus = `${minus} Дополнительно — трение с темой антардаши ${PLANET_NAMES[antarCode]}, возможны сбои ритма в эти дни.`;
+    minus = isEn
+      ? `${minus} Additionally — friction with the antardasha theme of ${planetName(antarCode, lang)}; rhythm disruptions are possible in these days.`
+      : `${minus} Дополнительно — трение с темой антардаши ${planetName(antarCode, lang)}, возможны сбои ритма в эти дни.`;
   }
-  const aspect = lifeAspectHouseDomain(code, details);
+  const aspect = lifeAspectHouseDomain(code, details, lang);
   const aspectText = aspect
-    ? `${aspect.house} дом (${HOUSE_MEANINGS[aspect.house]})${aspect.domains.length ? ` — сфера «${aspect.domains.join("», «")}»` : ""}.`
+    ? (isEn
+      ? `House ${aspect.house} (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — area "${aspect.domains.join('", "')}"` : ""}.`
+      : `${aspect.house} дом (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — сфера «${aspect.domains.join("», «")}»` : ""}.`)
     : "";
   return { plus, minus, aspectText, rel };
 }
@@ -538,7 +602,7 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
   );
 }
 
-function useBirthChart(person, goalName) {
+function useBirthChart(person, goalName, lang) {
   const [state, setState] = useState({ loading: false, error: null, details: null });
   const key = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}`;
 
@@ -555,7 +619,7 @@ function useBirthChart(person, goalName) {
         if (goalName) ymGoal(goalName);
       } catch (e) {
         if (cancelled) return;
-        setState({ loading: false, error: e.message || "Не удалось получить данные", details: null });
+        setState({ loading: false, error: e.message || (lang === "en" ? "Couldn't fetch the data" : "Не удалось получить данные"), details: null });
       }
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
@@ -565,7 +629,7 @@ function useBirthChart(person, goalName) {
   return state;
 }
 
-function useMajorDasha(person) {
+function useMajorDasha(person, lang) {
   const [state, setState] = useState({ loading: false, error: null, periods: null });
   const key = `${person.date}|${person.time}|${person.tz}|${person.lat}|${person.lon}`;
 
@@ -587,7 +651,7 @@ function useMajorDasha(person) {
         setState({ loading: false, error: null, periods });
       } catch (e) {
         if (cancelled) return;
-        setState({ loading: false, error: e.message || "Не удалось получить дашу", periods: null });
+        setState({ loading: false, error: e.message || (lang === "en" ? "Couldn't fetch the dasha" : "Не удалось получить дашу"), periods: null });
       }
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
@@ -602,6 +666,7 @@ function useMajorDasha(person) {
    ========================================================= */
 
 function ChartWheel({ details }) {
+  const { lang } = useLang();
   if (!details) return null;
   const cells = {};
   Object.entries(details).forEach(([k, v]) => {
@@ -622,12 +687,12 @@ function ChartWheel({ details }) {
         }}>
           {sign !== null && (
             <>
-              <div style={{ fontSize: 10, color: "#9089c9", letterSpacing: 0.4 }}>{SIGNS[sign]}</div>
+              <div style={{ fontSize: 10, color: "#9089c9", letterSpacing: 0.4 }}>{signName(sign, lang)}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                 {(cells[sign] || []).map((p) => {
                   if (p === "As") {
                     return (
-                      <span key={p} title="Асцендент" style={{
+                      <span key={p} title={lang === "en" ? "Ascendant" : "Асцендент"} style={{
                         fontSize: 12, fontWeight: 700, color: "#151233", background: "#e8c46b",
                         padding: "1px 6px", borderRadius: 10,
                       }}>As</span>
@@ -635,7 +700,7 @@ function ChartWheel({ details }) {
                   }
                   const color = PLANET_COLOR[p] || "#f1ede4";
                   return (
-                    <span key={p} title={PLANET_NAMES[p]} style={{
+                    <span key={p} title={planetName(p, lang)} style={{
                       fontSize: 12, fontWeight: 700, color, background: `${color}26`,
                       border: `1px solid ${color}66`, padding: "1px 6px 1px 5px", borderRadius: 10,
                       display: "inline-flex", alignItems: "center", gap: 3,
@@ -658,6 +723,7 @@ const inputStyle = { background: "#151233", border: "1px solid #332c66", color: 
 const labelStyle = { fontSize: 11, color: "#9089c9", marginBottom: 4, display: "block" };
 
 function GeoSearch({ onPick, dateForTz }) {
+  const { t } = useLang();
   const [place, setPlace] = useState("");
   const [status, setStatus] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -689,20 +755,20 @@ function GeoSearch({ onPick, dateForTz }) {
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
         <div style={{ flex: 1 }}>
-          <span style={labelStyle}>Город (латиницей точнее, например Moscow)</span>
-          <input style={inputStyle} value={place} onChange={(e) => setPlace(e.target.value)} placeholder="например, Moscow" />
+          <span style={labelStyle}>{t("geo_city_label")}</span>
+          <input style={inputStyle} value={place} onChange={(e) => setPlace(e.target.value)} placeholder={t("geo_placeholder")} />
         </div>
         <button onClick={search} style={{
           alignSelf: "flex-end", background: "#e8c46b", color: "#151233", border: "none",
           borderRadius: 6, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", height: 34,
-        }}>Найти</button>
+        }}>{t("geo_find_button")}</button>
       </div>
-      {status === "loading" && <div style={{ fontSize: 11, color: "#8b84b8", marginBottom: 8 }}>Ищу…</div>}
-      {status === "error" && <div style={{ fontSize: 11, color: "#e08b8b", marginBottom: 8 }}>Не нашёл — попробуйте латиницей.</div>}
-      {status === "ok" && <div style={{ fontSize: 11, color: "#8fd19e", marginBottom: 8 }}>Готово.</div>}
+      {status === "loading" && <div style={{ fontSize: 11, color: "#8b84b8", marginBottom: 8 }}>{t("geo_searching")}</div>}
+      {status === "error" && <div style={{ fontSize: 11, color: "#e08b8b", marginBottom: 8 }}>{t("geo_not_found")}</div>}
+      {status === "ok" && <div style={{ fontSize: 11, color: "#8fd19e", marginBottom: 8 }}>{t("geo_ready")}</div>}
       {status === "picking" && candidates.length > 0 && (
         <div style={{ marginBottom: 10, background: "#151233", borderRadius: 6, padding: 8 }}>
-          <div style={{ fontSize: 11, color: "#9089c9", marginBottom: 6 }}>Нашлось несколько мест — выберите нужное:</div>
+          <div style={{ fontSize: 11, color: "#9089c9", marginBottom: 6 }}>{t("geo_multiple_found")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {candidates.map((c, i) => (
               <button key={i} onClick={() => pick(c)} style={{
@@ -748,21 +814,22 @@ function BirthForm({ person, setPerson, label }) {
       <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(person.date)} />
 
       <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        <div><span style={labelStyle}>Широта</span><input style={inputStyle} type="number" step="0.01" value={person.lat} onChange={upd("lat")} /></div>
-        <div><span style={labelStyle}>Долгота</span><input style={inputStyle} type="number" step="0.01" value={person.lon} onChange={upd("lon")} /></div>
-        <div><span style={labelStyle}>Часовой пояс (UTC+)</span><input style={inputStyle} type="number" step="0.5" value={person.tz} onChange={upd("tz")} /></div>
+        <div><span style={labelStyle}>{t("form_lat")}</span><input style={inputStyle} type="number" step="0.01" value={person.lat} onChange={upd("lat")} /></div>
+        <div><span style={labelStyle}>{t("form_lon")}</span><input style={inputStyle} type="number" step="0.01" value={person.lon} onChange={upd("lon")} /></div>
+        <div><span style={labelStyle}>{t("form_tz")}</span><input style={inputStyle} type="number" step="0.5" value={person.tz} onChange={upd("tz")} /></div>
       </div>
     </div>
   );
 }
 
 function PlanetTable({ details }) {
+  const { lang } = useLang();
   if (!details) return null;
   return (
     <div style={{ overflowX: "auto", marginTop: 16 }}>
     <table style={{ width: "100%", minWidth: 420, borderCollapse: "collapse", fontSize: 12 }}>
       <thead><tr style={{ color: "#9089c9", textAlign: "left" }}>
-        <th style={{ padding: 6 }}>Планета</th><th>Знак</th><th>Накшатра</th><th>Пада</th><th>Дом</th>
+        <th style={{ padding: 6 }}>{lang === "en" ? "Planet" : "Планета"}</th><th>{lang === "en" ? "Sign" : "Знак"}</th><th>{lang === "en" ? "Nakshatra" : "Накшатра"}</th><th>{lang === "en" ? "Pada" : "Пада"}</th><th>{lang === "en" ? "House" : "Дом"}</th>
       </tr></thead>
       <tbody>
         {[...PLANET_ORDER, "As"].map((k) => {
@@ -770,9 +837,9 @@ function PlanetTable({ details }) {
           if (!v) return null;
           return (
             <tr key={k} style={{ borderTop: "1px solid #2e2a5c" }}>
-              <td style={{ padding: 6, color: PLANET_COLOR[k] || "#f1ede4", fontWeight: 600 }}>{PLANET_ICON[k] ? PLANET_ICON[k] + " " : ""}{PLANET_NAMES[k]}{v.retro ? " ℞" : ""}</td>
-              <td style={{ color: "#c9c4e8" }}>{v.signName}</td>
-              <td style={{ color: "#c9c4e8" }}>{v.nakName}</td>
+              <td style={{ padding: 6, color: PLANET_COLOR[k] || "#f1ede4", fontWeight: 600 }}>{PLANET_ICON[k] ? PLANET_ICON[k] + " " : ""}{planetName(k, lang)}{v.retro ? " ℞" : ""}</td>
+              <td style={{ color: "#c9c4e8" }}>{signName(v.sign, lang)}</td>
+              <td style={{ color: "#c9c4e8" }}>{nakshatraName(v.nak, lang)}</td>
               <td style={{ color: "#c9c4e8" }}>{v.pada}</td>
               <td style={{ color: "#c9c4e8" }}>{v.house ?? "—"}</td>
             </tr>
@@ -789,6 +856,7 @@ function PlanetTable({ details }) {
    ========================================================= */
 
 function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [unlockedByPackage, setUnlockedByPackage] = useState(false);
   const requestKey = `${mdEn}|${adEn}`;
@@ -820,7 +888,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
         setState({ loading: false, error: null, subs: data });
       } catch (e) {
         if (cancelled) return;
-        setState({ loading: false, error: e.message || "Не удалось получить пратьянтардаши", subs: null });
+        setState({ loading: false, error: e.message || (lang === "en" ? "Failed to fetch pratyantardashas" : "Не удалось получить пратьянтардаши"), subs: null });
       }
     })();
     return () => { cancelled = true; };
@@ -831,8 +899,10 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
   if (effectivelyLocked) {
     return (
       <PaywallTeaser
-        title="Пратьянтардаша — под-периоды"
-        text="Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — из пакета (1 запрос за период, повторный просмотр бесплатен)."
+        title={lang === "en" ? "Pratyantardasha — sub-periods" : "Пратьянтардаша — под-периоды"}
+        text={lang === "en"
+          ? "A detailed breakdown of sub-periods is free for the currently active period. The rest — from a package (1 request per period, re-viewing is free)."
+          : "Детальный разбор под-периодов доступен бесплатно для текущего активного периода. Остальные — из пакета (1 запрос за период, повторный просмотр бесплатен)."}
         goalName="paywall_pratyantar_hit"
         account={account}
         onGoToPricing={onGoToPricing}
@@ -841,8 +911,8 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
       />
     );
   }
-  if (state.loading) return <div style={{ fontSize: 11, color: "#8b84b8" }}>Загрузка пратьянтардаш…</div>;
-  if (state.error) return <div style={{ fontSize: 11, color: "#e08b8b" }}>Ошибка: {state.error}</div>;
+  if (state.loading) return <div style={{ fontSize: 11, color: "#8b84b8" }}>{lang === "en" ? "Loading pratyantardashas…" : "Загрузка пратьянтардаш…"}</div>;
+  if (state.error) return <div style={{ fontSize: 11, color: "#e08b8b" }}>{lang === "en" ? "Error" : "Ошибка"}: {state.error}</div>;
   if (!state.subs) return null;
 
   const now = new Date();
@@ -855,21 +925,21 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
         const active = start && end && now >= start && now < end;
         const code = PLANET_EN_TO_CODE[s.planet] || s.planet;
         const rel = relation(adCode, code);
-        const parts = pratyantarComboParts(adCode, code, details);
+        const parts = pratyantarComboParts(adCode, code, details, lang);
         return (
           <div key={si} style={{
             fontSize: 11, padding: "5px 8px", marginBottom: 1, borderRadius: 5,
             background: active ? "#211c47" : "transparent",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", color: active ? "#e8c46b" : "#c9c4e8", fontWeight: 600 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{active ? "⋯ " : ""}{PLANET_NAMES[code] || s.planet}<RelationBadge rel={rel} /></span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{active ? "⋯ " : ""}{planetName(code, lang) || s.planet}<RelationBadge rel={rel} /></span>
               <span style={{ fontWeight: 400, color: "#766fa0" }}>{start?.toISOString().slice(0, 10)}—{end?.toISOString().slice(0, 10)}</span>
             </div>
             {parts && (
               <div style={{ fontSize: 10.5, lineHeight: 1.5, marginTop: 3 }}>
                 <div style={{ color: "#7fd99a" }}>+ {parts.plus}</div>
                 <div style={{ color: "#e0a8a8" }}>− {parts.minus}</div>
-                {parts.aspectText && <div style={{ color: "#766fa0", marginTop: 1 }}>Сфера: {parts.aspectText}</div>}
+                {parts.aspectText && <div style={{ color: "#766fa0", marginTop: 1 }}>{lang === "en" ? "Area" : "Сфера"}: {parts.aspectText}</div>}
               </div>
             )}
           </div>
@@ -880,6 +950,7 @@ function PratyantarList({ birth, mdEn, adEn, open, details, locked, account, onG
 }
 
 function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
   const [state, setState] = useState({ loading: false, error: null, subs: null });
   const [subOpen, setSubOpen] = useState(null);
 
@@ -894,7 +965,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
         setState({ loading: false, error: null, subs: data });
       } catch (e) {
         if (cancelled) return;
-        setState({ loading: false, error: e.message || "Не удалось получить антардаши", subs: null });
+        setState({ loading: false, error: e.message || (lang === "en" ? "Failed to fetch antardashas" : "Не удалось получить антардаши"), subs: null });
       }
     })();
     return () => { cancelled = true; };
@@ -902,8 +973,8 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
   }, [open]);
 
   if (!open) return null;
-  if (state.loading) return <div style={{ fontSize: 12, color: "#8b84b8" }}>Загрузка антардаш…</div>;
-  if (state.error) return <div style={{ fontSize: 12, color: "#e08b8b" }}>Ошибка: {state.error}</div>;
+  if (state.loading) return <div style={{ fontSize: 12, color: "#8b84b8" }}>{lang === "en" ? "Loading antardashas…" : "Загрузка антардаш…"}</div>;
+  if (state.error) return <div style={{ fontSize: 12, color: "#e08b8b" }}>{lang === "en" ? "Error" : "Ошибка"}: {state.error}</div>;
   if (!state.subs) return null;
 
   const now = new Date();
@@ -915,7 +986,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
         const subActive = start && end && now >= start && now < end;
         const code = PLANET_EN_TO_CODE[s.planet] || s.planet;
         const isOpen = subOpen === si;
-        const parts = dashaComboParts(mahaCode, code, details);
+        const parts = dashaComboParts(mahaCode, code, details, lang);
         const rel = parts?.rel || relation(mahaCode, code);
         return (
           <div key={si}>
@@ -923,22 +994,24 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
               display: "flex", justifyContent: "space-between", fontSize: 12, cursor: "pointer",
               color: subActive ? "#e8c46b" : "#8b84b8", padding: "2px 0",
             }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{subActive ? "→ " : ""}{PLANET_NAMES[code] || s.planet}<RelationBadge rel={rel} /></span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{subActive ? "→ " : ""}{planetName(code, lang) || s.planet}<RelationBadge rel={rel} /></span>
               <span>{start?.toISOString().slice(0, 10)} — {end?.toISOString().slice(0, 10)}</span>
             </div>
             {parts && (
               <div style={{ fontSize: 12, color: "#c9c4e8", lineHeight: 1.5, marginBottom: 3 }}>
                 <p style={{ marginBottom: 2 }}>{parts.relationText}</p>
-                <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>Сильные стороны:</b> {parts.strengths}</p>
-                <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>Осторожно:</b> {parts.caution}</p>
-                {parts.aspectText && <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>Сфера жизни:</b> {parts.aspectText}</p>}
+                <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>{lang === "en" ? "Strengths:" : "Сильные стороны:"}</b> {parts.strengths}</p>
+                <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>{lang === "en" ? "Caution:" : "Осторожно:"}</b> {parts.caution}</p>
+                {parts.aspectText && <p style={{ marginBottom: 2 }}><b style={{ color: "#9089c9" }}>{lang === "en" ? "Life area:" : "Сфера жизни:"}</b> {parts.aspectText}</p>}
               </div>
             )}
             <div onClick={() => setSubOpen(isOpen ? null : si)} style={{
               fontSize: 11, color: "#e8c46b", cursor: "pointer", marginBottom: 3, fontWeight: 600,
               display: "flex", alignItems: "center", gap: 4,
             }}>
-              {isOpen ? "▾" : "▸"} под-периоды {PLANET_NAMES[code]} (пратьянтардаша, свои даты внутри этой антардаши)
+              {isOpen ? "▾" : "▸"} {lang === "en"
+                ? `sub-periods of ${planetName(code, lang)} (pratyantardasha, its own dates within this antardasha)`
+                : `под-периоды ${planetName(code, lang)} (пратьянтардаша, свои даты внутри этой антардаши)`}
             </div>
             <PratyantarList birth={birth} mdEn={majorPlanetEn} adEn={s.planet} open={isOpen} details={details} locked={!subActive} account={account} onGoToPricing={onGoToPricing} packageInfo={packageInfo} buying={buying} />
           </div>
@@ -949,6 +1022,7 @@ function AntardashaList({ birth, mahaCode, majorPlanetEn, open, details, account
 }
 
 function DashaTimeline({ birth, periods, details, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
   const now = new Date();
   const [openIdx, setOpenIdx] = useState(null);
   const lagnaLord = details?.As?.sign != null ? signLordOf(details.As.sign) : null;
@@ -959,7 +1033,7 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
         {periods.map((p, i) => {
           const active = p.start && p.end && now >= p.start && now < p.end;
           return (
-            <div key={i} title={PLANET_NAMES[p.lord]} onClick={() => setOpenIdx(openIdx === i ? null : i)}
+            <div key={i} title={planetName(p.lord, lang)} onClick={() => setOpenIdx(openIdx === i ? null : i)}
               style={{
                 flex: Math.max(p.fullYears, 0.2), background: active ? "#e8c46b" : "#332c66",
                 borderRight: "1px solid #151233", cursor: "pointer",
@@ -969,7 +1043,7 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
       </div>
       {periods.map((p, i) => {
         const active = p.start && p.end && now >= p.start && now < p.end;
-        const text = DASHA_TEXTS[p.lord];
+        const text = dashaText(p.lord, lang);
         return (
           <div key={i} style={{
             marginBottom: 8, borderRadius: 8, overflow: "hidden",
@@ -980,7 +1054,7 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
               padding: "10px 14px", display: "flex", justifyContent: "space-between", cursor: "pointer",
             }}>
               <span style={{ color: active ? "#e8c46b" : "#f1ede4", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                {active ? "● " : ""}Махадаша {PLANET_NAMES[p.lord] || p.planetEn}
+                {active ? "● " : ""}{lang === "en" ? "Mahadasha" : "Махадаша"} {planetName(p.lord, lang) || p.planetEn}
                 <RelationBadge rel={lagnaLord ? relation(lagnaLord, p.lord) : null} />
               </span>
               <span style={{ color: "#9089c9", fontSize: 13 }}>
@@ -991,22 +1065,24 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
               <div style={{ padding: "0 14px 14px", color: "#c9c4e8", fontSize: 13, lineHeight: 1.55 }}>
                 {text && (
                   <>
-                    <p><b style={{ color: "#e8c46b" }}>Сильные стороны периода:</b> {text.strengths}</p>
-                    <p><b style={{ color: "#e8c46b" }}>Осторожно:</b> {text.caution}</p>
-                    <p><b style={{ color: "#e8c46b" }}>Стиль коммуникации:</b> {text.comm}</p>
+                    <p><b style={{ color: "#e8c46b" }}>{lang === "en" ? "Strengths of the period:" : "Сильные стороны периода:"}</b> {text.strengths}</p>
+                    <p><b style={{ color: "#e8c46b" }}>{lang === "en" ? "Caution:" : "Осторожно:"}</b> {text.caution}</p>
+                    <p><b style={{ color: "#e8c46b" }}>{lang === "en" ? "Communication style:" : "Стиль коммуникации:"}</b> {text.comm}</p>
                   </>
                 )}
                 {(() => {
-                  const aspect = lifeAspectHouseDomain(p.lord, details);
+                  const aspect = lifeAspectHouseDomain(p.lord, details, lang);
                   if (!aspect) return null;
                   return (
                     <p>
-                      <b style={{ color: "#e8c46b" }}>Сфера жизни:</b> управитель периода натально стоит в {aspect.house} доме ({HOUSE_MEANINGS[aspect.house]}){aspect.domains.length ? ` — сильнее всего это звучит в: ${aspect.domains.join(", ")}` : ""}.
+                      <b style={{ color: "#e8c46b" }}>{lang === "en" ? "Life area:" : "Сфера жизни:"}</b> {lang === "en"
+                        ? `the period's ruler natally sits in house ${aspect.house} (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — this shows up most in: ${aspect.domains.join(", ")}` : ""}.`
+                        : `управитель периода натально стоит в ${aspect.house} доме (${houseMeaning(aspect.house, lang)})${aspect.domains.length ? ` — сильнее всего это звучит в: ${aspect.domains.join(", ")}` : ""}.`}
                     </p>
                   );
                 })()}
                 <div style={{ marginTop: 10 }}>
-                  <b style={{ color: "#9089c9", fontSize: 12 }}>Антардаши (кликните — раскроется ещё и пратьянтардаша):</b>
+                  <b style={{ color: "#9089c9", fontSize: 12 }}>{lang === "en" ? "Antardashas (click — the pratyantardasha will also open):" : "Антардаши (кликните — раскроется ещё и пратьянтардаша):"}</b>
                   <AntardashaList birth={birth} mahaCode={p.lord} majorPlanetEn={p.planetEn} open={openIdx === i} details={details} account={account} onGoToPricing={onGoToPricing} packageInfo={packageInfo} buying={buying} />
                 </div>
               </div>
@@ -1036,13 +1112,28 @@ const PLANET_PLUS_USE = {
   Ra: "открываются нестандартные возможности — стоит присматриваться к необычным вариантам",
   Ke: "легче отпустить лишнее и сосредоточиться на главном — не распыляйтесь на мелочи",
 };
+const PLANET_PLUS_USE_EN = {
+  Su: "it's easier to get recognition and to lead — take the initiative boldly",
+  Mo: "it's easier to rely on intuition and mood — trust your first impression",
+  Ma: "it's easier to act quickly and decisively — don't be afraid to go first",
+  Me: "it's easier to negotiate, explain, and formalize things — make use of talks and paperwork",
+  Ju: "it's easier to grow and get support from others — don't be shy about asking and offering",
+  Ve: "it's easier to find compromise and negotiate amicably — take the gentle approach",
+  Sa: "what you build now will hold for a long time — invest in structure",
+  Ra: "unconventional opportunities are opening up — it's worth looking closely at unusual options",
+  Ke: "it's easier to let go of the excess and focus on what matters — don't scatter your attention on trifles",
+};
+function planetPlusUse(code, lang) { return (lang === "en" ? PLANET_PLUS_USE_EN : PLANET_PLUS_USE)[code]; }
 
 // Плюсы/минусы по сфере: благотворные планеты и хорошо расположенная «планета-хозяйка
 // дома» — плюс; трудные планеты в доме и хозяйка в слабой позиции (6/8/12 дом) — минус.
 // Каждая строка написана так, чтобы обычному человеку было понятно: что происходит, что
 // это значит на практике и что с этим делать. Эвристика поверх уже посчитанных домов,
 // не замена консультации.
-function assessDomain(dm, rows) {
+function assessDomain(dmKey, rows, lang) {
+  const dm = DOMAIN_META[dmKey];
+  const title = domainTitle(dmKey, lang);
+  const isEn = lang === "en";
   const pluses = [];
   const minuses = [];
   const watch = [];
@@ -1051,23 +1142,33 @@ function assessDomain(dm, rows) {
   dm.houses.forEach((h) => {
     const row = rows[h - 1];
     if (!row.occupants.length) {
-      watch.push(`${h} дом (${HOUSE_MEANINGS[h]}) — сюда напрямую не попала ни одна планета. Это не плохо и не хорошо само по себе: всё в этой части темы зависит от того, как чувствует себя планета-хозяйка дома — смотрите про неё ниже.`);
+      watch.push(isEn
+        ? `House ${h} (${houseMeaning(h, lang)}) — no planet lands directly here. That's neither good nor bad by itself: everything in this part of the theme depends on how the house's ruling planet is doing — see below.`
+        : `${h} дом (${houseMeaning(h, lang)}) — сюда напрямую не попала ни одна планета. Это не плохо и не хорошо само по себе: всё в этой части темы зависит от того, как чувствует себя планета-хозяйка дома — смотрите про неё ниже.`);
     }
 
     row.occupants.forEach((c) => {
       if (NATURAL_BENEFICS.includes(c) || NATURAL_MILD_BENEFICS.includes(c)) {
-        pluses.push(`${PLANET_NAMES[c]} находится в ${h} доме — своими качествами (${PLANET_CORE[c]}) она поддерживает эту сферу. На практике: ${PLANET_PLUS_USE[c]}.`);
+        pluses.push(isEn
+          ? `${planetName(c, lang)} sits in house ${h} — its qualities (${planetCore(c, lang)}) support this area. In practice: ${planetPlusUse(c, lang)}.`
+          : `${planetName(c, lang)} находится в ${h} доме — своими качествами (${planetCore(c, lang)}) она поддерживает эту сферу. На практике: ${planetPlusUse(c, lang)}.`);
       } else {
-        minuses.push(`${PLANET_NAMES[c]} находится в ${h} доме — это планета непростого характера (${PLANET_CORE[c]}), и здесь она требует больше сознательных усилий, чем везение само по себе. Что делать: ${PLANET_FOCUS_ADVICE[c]}.`);
+        minuses.push(isEn
+          ? `${planetName(c, lang)} sits in house ${h} — this is a planet of a challenging nature (${planetCore(c, lang)}), and here it demands more conscious effort than luck alone. What to do: ${planetFocusAdvice(c, lang)}.`
+          : `${planetName(c, lang)} находится в ${h} доме — это планета непростого характера (${planetCore(c, lang)}), и здесь она требует больше сознательных усилий, чем везение само по себе. Что делать: ${planetFocusAdvice(c, lang)}.`);
         adviceCodes.push(c);
       }
     });
 
     if (row.lordHouse) {
       if (STRONG_HOUSES.has(row.lordHouse)) {
-        pluses.push(`За «${dm.title.toLowerCase()}» во многом отвечает ${PLANET_NAMES[row.lord]} — и сейчас она сама стоит в сильной части карты (${row.lordHouse} дом, ${HOUSE_MEANINGS[row.lordHouse]}). Проще говоря: у этой сферы есть надёжная опора, многое будет получаться без лишней борьбы. На практике: ${PLANET_PLUS_USE[row.lord]}.`);
+        pluses.push(isEn
+          ? `"${title}" is largely governed by ${planetName(row.lord, lang)} — and it currently sits in a strong part of the chart (house ${row.lordHouse}, ${houseMeaning(row.lordHouse, lang)}). In plain terms: this area has a reliable footing, much will come without excessive struggle. In practice: ${planetPlusUse(row.lord, lang)}.`
+          : `За «${title.toLowerCase()}» во многом отвечает ${planetName(row.lord, lang)} — и сейчас она сама стоит в сильной части карты (${row.lordHouse} дом, ${houseMeaning(row.lordHouse, lang)}). Проще говоря: у этой сферы есть надёжная опора, многое будет получаться без лишней борьбы. На практике: ${planetPlusUse(row.lord, lang)}.`);
       } else if (DIFFICULT_HOUSES.has(row.lordHouse)) {
-        minuses.push(`Планета, отвечающая за «${dm.title.toLowerCase()}», — ${PLANET_NAMES[row.lord]} — сейчас стоит в непростой части карты (${row.lordHouse} дом, ${HOUSE_MEANINGS[row.lordHouse]}). Проще говоря: этой сфере не хватает «топлива» само по себе — легко не будет, результат придётся создавать своими руками. Что делать: ${PLANET_FOCUS_ADVICE[row.lord]}.`);
+        minuses.push(isEn
+          ? `The planet responsible for "${title}" — ${planetName(row.lord, lang)} — currently sits in a difficult part of the chart (house ${row.lordHouse}, ${houseMeaning(row.lordHouse, lang)}). In plain terms: this area lacks "fuel" on its own — it won't come easily, the result will have to be built by hand. What to do: ${planetFocusAdvice(row.lord, lang)}.`
+          : `Планета, отвечающая за «${title.toLowerCase()}», — ${planetName(row.lord, lang)} — сейчас стоит в непростой части карты (${row.lordHouse} дом, ${houseMeaning(row.lordHouse, lang)}). Проще говоря: этой сфере не хватает «топлива» само по себе — легко не будет, результат придётся создавать своими руками. Что делать: ${planetFocusAdvice(row.lord, lang)}.`);
         adviceCodes.push(row.lord);
       }
     }
@@ -1075,16 +1176,18 @@ function assessDomain(dm, rows) {
 
   const score = pluses.length - minuses.length;
   const verdict = score > 0 ? "good" : score < 0 ? "watch" : "mixed";
-  const advice = [...new Set(adviceCodes)].slice(0, 3).map((c) => `${PLANET_NAMES[c]}: ${PLANET_FOCUS_ADVICE[c]}.`);
+  const advice = [...new Set(adviceCodes)].slice(0, 3).map((c) => `${planetName(c, lang)}: ${planetFocusAdvice(c, lang)}.`);
 
   const context = dm.houses.map((h) => {
     const row = rows[h - 1];
-    return `${h} дом (${HOUSE_MEANINGS[h]}) — знак ${SIGNS[row.signIdx]}, стихия ${elementRu(elementOf(row.signIdx))}: в поведении это ${SIGN_TRAITS[row.signIdx]}.`;
+    return isEn
+      ? `House ${h} (${houseMeaning(h, lang)}) — sign ${signName(row.signIdx, lang)}, element ${elementOf(row.signIdx)}: in behavior this reads as ${signTraits(row.signIdx, lang)}.`
+      : `${h} дом (${houseMeaning(h, lang)}) — знак ${signName(row.signIdx, lang)}, стихия ${elementRu(elementOf(row.signIdx))}: в поведении это ${signTraits(row.signIdx, lang)}.`;
   });
 
-  const summary = HOUSE_VERDICT_SUMMARY[verdict];
+  const summary = houseVerdictSummary(verdict, lang);
 
-  return { pluses, minuses, watch, advice, verdict, context, summary };
+  return { pluses, minuses, watch, advice, verdict, context, summary, title };
 }
 
 const HOUSE_VERDICT_SUMMARY = {
@@ -1092,32 +1195,43 @@ const HOUSE_VERDICT_SUMMARY = {
   mixed: "Сильные и слабые стороны примерно уравновешивают друг друга — результат заметно зависит от текущих даш и ваших сознательных усилий.",
   watch: "Эта сфера — зона роста: без сознательной работы над отмеченными точками возможны трудности, но управлять ситуацией вполне реально.",
 };
+const HOUSE_VERDICT_SUMMARY_EN = {
+  good: "Overall this area rests well on the chart — there aren't many serious risks, it's enough to keep an eye on the nuances noted above.",
+  mixed: "Strengths and weaknesses roughly balance out — the outcome depends noticeably on the current dashas and your own conscious effort.",
+  watch: "This area is a growth zone: without conscious work on the points noted above, difficulties are possible, but the situation is quite manageable.",
+};
+function houseVerdictSummary(v, lang) { return (lang === "en" ? HOUSE_VERDICT_SUMMARY_EN : HOUSE_VERDICT_SUMMARY)[v]; }
 
 const HOUSE_VERDICT_META = {
   good: { label: "Сильная сфера", bg: "#1c3a2e", color: "#7fd99a" },
   mixed: { label: "Смешанная картина", bg: "#3a3320", color: "#e8c46b" },
   watch: { label: "Требует внимания", bg: "#3a2020", color: "#e88b8b" },
 };
+const HOUSE_VERDICT_META_LABEL_EN = { good: "Strong area", mixed: "Mixed picture", watch: "Needs attention" };
+function houseVerdictLabel(v, lang) { return lang === "en" ? HOUSE_VERDICT_META_LABEL_EN[v] : HOUSE_VERDICT_META[v]?.label; }
 
 function HousesPanel({ details }) {
-  if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
+  const { lang } = useLang();
+  if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{lang === "en" ? "Please wait for the chart to load on the \"Chart\" tab first." : "Сначала дождитесь загрузки карты на вкладке «Карта»."}</div>;
   const ascSignIdx = details.As.sign ?? 0;
   const rows = buildHouseRows(details);
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-        Дома считаются от Асцендента ({SIGNS[ascSignIdx]}). По каждой сфере — плюсы, на что обратить внимание и что практически можно поправить.
+        {lang === "en"
+          ? `Houses are counted from the Ascendant (${signName(ascSignIdx, lang)}). For each area: pluses, points to watch, and what can practically be improved.`
+          : `Дома считаются от Асцендента (${signName(ascSignIdx, lang)}). По каждой сфере — плюсы, на что обратить внимание и что практически можно поправить.`}
       </div>
 
-      {Object.entries(DOMAIN_META).map(([key, dm]) => {
-        const a = assessDomain(dm, rows);
+      {Object.entries(DOMAIN_META).map(([key]) => {
+        const a = assessDomain(key, rows, lang);
         const vm = HOUSE_VERDICT_META[a.verdict];
         return (
           <div key={key} style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-              <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{dm.title}</div>
-              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: vm.bg, color: vm.color }}>{vm.label}</span>
+              <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{a.title}</div>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: vm.bg, color: vm.color }}>{houseVerdictLabel(a.verdict, lang)}</span>
             </div>
             <div style={{ marginBottom: 10 }}>
               {a.context.map((t, i) => (
@@ -1127,7 +1241,7 @@ function HousesPanel({ details }) {
 
             {a.pluses.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 12, color: "#7fd99a", fontWeight: 600, marginBottom: 4 }}>Плюсы</div>
+                <div style={{ fontSize: 12, color: "#7fd99a", fontWeight: 600, marginBottom: 4 }}>{lang === "en" ? "Pluses" : "Плюсы"}</div>
                 {a.pluses.map((t, i) => (
                   <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
                 ))}
@@ -1136,7 +1250,7 @@ function HousesPanel({ details }) {
 
             {(a.minuses.length > 0 || a.watch.length > 0) && (
               <div style={{ marginBottom: a.advice.length ? 10 : 0 }}>
-                <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 4 }}>На что обратить внимание</div>
+                <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 4 }}>{lang === "en" ? "Points to watch" : "На что обратить внимание"}</div>
                 {[...a.minuses, ...a.watch].map((t, i) => (
                   <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
                 ))}
@@ -1145,7 +1259,7 @@ function HousesPanel({ details }) {
 
             {a.advice.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 12, color: "#9db8e8", fontWeight: 600, marginBottom: 4 }}>Что можно поправить и как</div>
+                <div style={{ fontSize: 12, color: "#9db8e8", fontWeight: 600, marginBottom: 4 }}>{lang === "en" ? "What can be improved and how" : "Что можно поправить и как"}</div>
                 {a.advice.map((t, i) => (
                   <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f3f5c" }}>{t}</p>
                 ))}
@@ -1153,26 +1267,26 @@ function HousesPanel({ details }) {
             )}
 
             <div style={{ fontSize: 12, color: "#766fa0", lineHeight: 1.55, paddingTop: 8, borderTop: "1px solid #2e2a5c" }}>
-              <b style={{ color: "#9089c9" }}>Итог:</b> {a.summary}
+              <b style={{ color: "#9089c9" }}>{lang === "en" ? "Bottom line:" : "Итог:"}</b> {a.summary}
             </div>
           </div>
         );
       })}
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>Все 12 домов</div>
+        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>{lang === "en" ? "All 12 houses" : "Все 12 домов"}</div>
         <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: 380, borderCollapse: "collapse", fontSize: 12 }}>
           <thead><tr style={{ color: "#9089c9", textAlign: "left" }}>
-            <th style={{ padding: 6 }}>Дом</th><th>Знак</th><th>Планета-хозяйка</th><th>Планеты внутри</th>
+            <th style={{ padding: 6 }}>{lang === "en" ? "House" : "Дом"}</th><th>{lang === "en" ? "Sign" : "Знак"}</th><th>{lang === "en" ? "Ruling planet" : "Планета-хозяйка"}</th><th>{lang === "en" ? "Planets inside" : "Планеты внутри"}</th>
           </tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.houseNum} style={{ borderTop: "1px solid #2e2a5c" }}>
                 <td style={{ padding: 6, color: "#f1ede4" }}>{r.houseNum}</td>
-                <td style={{ color: "#c9c4e8" }}>{SIGNS[r.signIdx]}</td>
-                <td style={{ color: "#c9c4e8" }}>{PLANET_NAMES[r.lord]}</td>
-                <td style={{ color: "#c9c4e8" }}>{r.occupants.map((c) => PLANET_NAMES[c]).join(", ") || "—"}</td>
+                <td style={{ color: "#c9c4e8" }}>{signName(r.signIdx, lang)}</td>
+                <td style={{ color: "#c9c4e8" }}>{planetName(r.lord, lang)}</td>
+                <td style={{ color: "#c9c4e8" }}>{r.occupants.map((c) => planetName(c, lang)).join(", ") || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -1218,74 +1332,96 @@ function familyScoreVerdict(score) {
 
 // Разбор 7 дома и Юпитера как караки мужа — отдельная (не из DOMAIN_META) логика, чтобы не
 // путать тему партнёрства с темой бизнеса, которая тоже частично завязана на 7 дом.
-function assessPartner(rows, details) {
+function assessPartner(rows, details, lang) {
   const row7 = rows[6];
   const juHouse = details?.Ju?.house;
   const juSign = details?.Ju?.sign;
   const pluses = [];
   const minuses = [];
+  const isEn = lang === "en";
 
   row7.occupants.forEach((c) => {
     if (NATURAL_BENEFICS.includes(c) || NATURAL_MILD_BENEFICS.includes(c)) {
-      pluses.push(`${PLANET_NAMES[c]} стоит прямо в 7 доме (партнёрство, брак) — её качества (${PLANET_CORE[c]}) поддерживают тему отношений.`);
+      pluses.push(isEn
+        ? `${planetName(c, lang)} sits right in house 7 (partnership, marriage) — its qualities (${planetCore(c, lang)}) support the theme of relationships.`
+        : `${planetName(c, lang)} стоит прямо в 7 доме (партнёрство, брак) — её качества (${planetCore(c, lang)}) поддерживают тему отношений.`);
     } else {
-      minuses.push(`${PLANET_NAMES[c]} стоит в 7 доме — непростая планета здесь означает, что тема отношений требует больше сознательных усилий, чем везения самого по себе. Что делать: ${PLANET_FOCUS_ADVICE[c]}.`);
+      minuses.push(isEn
+        ? `${planetName(c, lang)} sits in house 7 — a challenging planet here means the theme of relationships needs more conscious effort than luck alone. What to do: ${planetFocusAdvice(c, lang)}.`
+        : `${planetName(c, lang)} стоит в 7 доме — непростая планета здесь означает, что тема отношений требует больше сознательных усилий, чем везения самого по себе. Что делать: ${planetFocusAdvice(c, lang)}.`);
     }
   });
 
   if (row7.lordHouse) {
     if (STRONG_HOUSES.has(row7.lordHouse)) {
-      pluses.push(`Управитель 7 дома, ${PLANET_NAMES[row7.lord]}, сам стоит в сильной части карты (${row7.lordHouse} дом, ${HOUSE_MEANINGS[row7.lordHouse]}) — у партнёрской темы есть устойчивая опора.`);
+      pluses.push(isEn
+        ? `The ruler of house 7, ${planetName(row7.lord, lang)}, itself sits in a strong part of the chart (house ${row7.lordHouse}, ${houseMeaning(row7.lordHouse, lang)}) — the partnership theme has solid footing.`
+        : `Управитель 7 дома, ${planetName(row7.lord, lang)}, сам стоит в сильной части карты (${row7.lordHouse} дом, ${houseMeaning(row7.lordHouse, lang)}) — у партнёрской темы есть устойчивая опора.`);
     } else if (DIFFICULT_HOUSES.has(row7.lordHouse)) {
-      minuses.push(`Управитель 7 дома, ${PLANET_NAMES[row7.lord]}, стоит в непростом доме (${row7.lordHouse}, ${HOUSE_MEANINGS[row7.lordHouse]}) — партнёрство скорее потребует осознанной работы, чем сложится само собой.`);
+      minuses.push(isEn
+        ? `The ruler of house 7, ${planetName(row7.lord, lang)}, sits in a difficult house (${row7.lordHouse}, ${houseMeaning(row7.lordHouse, lang)}) — partnership will more likely require conscious work than fall into place on its own.`
+        : `Управитель 7 дома, ${planetName(row7.lord, lang)}, стоит в непростом доме (${row7.lordHouse}, ${houseMeaning(row7.lordHouse, lang)}) — партнёрство скорее потребует осознанной работы, чем сложится само собой.`);
     }
   }
 
   if (juHouse) {
     if (STRONG_HOUSES.has(juHouse)) {
-      pluses.push(`Юпитер — классическая карака мужа в женской карте — сам стоит в сильной части карты (${juHouse} дом, ${HOUSE_MEANINGS[juHouse]}). Хороший знак для качества партнёрства и поддержки со стороны мужа.`);
+      pluses.push(isEn
+        ? `Jupiter — the classical karaka for the husband in a female chart — itself sits in a strong part of the chart (house ${juHouse}, ${houseMeaning(juHouse, lang)}). A good sign for the quality of the partnership and the husband's support.`
+        : `Юпитер — классическая карака мужа в женской карте — сам стоит в сильной части карты (${juHouse} дом, ${houseMeaning(juHouse, lang)}). Хороший знак для качества партнёрства и поддержки со стороны мужа.`);
     } else if (DIFFICULT_HOUSES.has(juHouse)) {
-      minuses.push(`Юпитер — карака мужа — стоит в непростом доме (${juHouse}, ${HOUSE_MEANINGS[juHouse]}). Это не означает «плохого мужа» — скорее что тема партнёрства требует больше сознательного участия и терпения с обеих сторон.`);
+      minuses.push(isEn
+        ? `Jupiter — the karaka for the husband — sits in a difficult house (${juHouse}, ${houseMeaning(juHouse, lang)}). This doesn't mean a "bad husband" — rather that the partnership theme needs more conscious participation and patience from both sides.`
+        : `Юпитер — карака мужа — стоит в непростом доме (${juHouse}, ${houseMeaning(juHouse, lang)}). Это не означает «плохого мужа» — скорее что тема партнёрства требует больше сознательного участия и терпения с обеих сторон.`);
     }
   }
 
   const score = pluses.length - minuses.length;
   const verdict = score > 0 ? "good" : score < 0 ? "watch" : "mixed";
-  const juTrait = juSign != null ? SIGN_TRAITS[juSign] : null;
+  const juTrait = juSign != null ? signTraits(juSign, lang) : null;
 
   return { pluses, minuses, verdict, juSign, juTrait, row7 };
 }
 
 function FamilyPanel({ person, details, periods, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
   if (person.gender !== "female") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 20, textAlign: "center", maxWidth: 480, margin: "0 auto" }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Этот разбор — для женской карты</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>{isEn ? "This breakdown is for a female chart" : "Этот разбор — для женской карты"}</div>
           <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10 }}>
-            Он построен на классической связке «Юпитер — карака мужа», которая применяется именно к женской карте.
+            {isEn
+              ? "It's built on the classical link \"Jupiter — karaka for the husband,\" which applies specifically to a female chart."
+              : "Он построен на классической связке «Юпитер — карака мужа», которая применяется именно к женской карте."}
           </p>
           <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
-            Чтобы открыть его: на вкладке «Карта» в поле «Пол (для совместимости)» выберите «Женский».
+            {isEn
+              ? "To open it: on the \"Chart\" tab, in the \"Gender (for compatibility)\" field, select \"Female.\""
+              : "Чтобы открыть его: на вкладке «Карта» в поле «Пол (для совместимости)» выберите «Женский»."}
           </p>
           <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.6, marginTop: 10 }}>
-            А пока — тема детей в целом есть в «Дома и сферы» (карточка «Дети»), партнёрство — во вкладке «Совместимость».
+            {isEn
+              ? "In the meantime — the theme of children in general is in \"Houses & areas\" (the \"Children\" card), partnership is in the \"Compatibility\" tab."
+              : "А пока — тема детей в целом есть в «Дома и сферы» (карточка «Дети»), партнёрство — во вкладке «Совместимость»."}
           </p>
         </div>
       </div>
     );
   }
   if (!details?.As) {
-    return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>;
+    return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{isEn ? "Please wait for the chart to load on the \"Chart\" tab first." : "Сначала дождитесь загрузки карты на вкладке «Карта»."}</div>;
   }
 
   const intro = (
     <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-      В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего.
+      {isEn
+        ? "In a female chart, Jupiter is traditionally read as the karaka (chief significator) of the husband — which is why the themes of \"children\" (5th house) and \"partner\" overlap here: the same planet governs both. This is a symbolic, traditional reading, not a medical forecast or a guarantee of a specific number of children or a specific partner — it shows the chart's tendencies, not facts about the future."
+        : "В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего."}
     </div>
   );
 
-  // Открыто целиком тем, кто хоть раз купил пакет (само по себе не тратит лимит запросов).
   const unlocked = account?.loggedIn && account?.totalQuota > 0;
 
   if (!unlocked) {
@@ -1293,13 +1429,17 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
         {intro}
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>Дети, партнёр и лучшие периоды</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 8 }}>{isEn ? "Children, partner, and the best periods" : "Дети, партнёр и лучшие периоды"}</div>
           <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 4 }}>
-            Разбор темы детей (5 дом), партнёра через Юпитер как карака мужа, и оценка лучших периодов жизни для обеих тем.
+            {isEn
+              ? "A breakdown of the theme of children (5th house), of the partner via Jupiter as karaka for the husband, and an assessment of the best life periods for both themes."
+              : "Разбор темы детей (5 дом), партнёра через Юпитер как карака мужа, и оценка лучших периодов жизни для обеих тем."}
           </p>
           <PaywallTeaser
-            title="Семья и дети — в полной версии"
-            text="Открывается покупкой пакета (даёт доступ навсегда, независимо от остатка лимита на другие функции)."
+            title={isEn ? "Family and children — in the full version" : "Семья и дети — в полной версии"}
+            text={isEn
+              ? "Unlocked by buying a package (grants access forever, regardless of the remaining quota for other features)."
+              : "Открывается покупкой пакета (даёт доступ навсегда, независимо от остатка лимита на другие функции)."}
             goalName="paywall_family_hit"
             account={account}
             onGoToPricing={onGoToPricing}
@@ -1312,9 +1452,9 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
   }
 
   const rows = buildHouseRows(details);
-  const childrenA = assessDomain(DOMAIN_META.children, rows);
+  const childrenA = assessDomain("children", rows, lang);
   const childrenVm = HOUSE_VERDICT_META[childrenA.verdict];
-  const partnerA = assessPartner(rows, details);
+  const partnerA = assessPartner(rows, details, lang);
   const partnerVm = HOUSE_VERDICT_META[partnerA.verdict];
 
   const scored = (periods || []).map((p) => {
@@ -1337,8 +1477,8 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дети — 5 дом</div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: childrenVm.bg, color: childrenVm.color }}>{childrenVm.label}</span>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{isEn ? "Children — 5th house" : "Дети — 5 дом"}</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: childrenVm.bg, color: childrenVm.color }}>{houseVerdictLabel(childrenA.verdict, lang)}</span>
         </div>
         {childrenA.context.map((t, i) => (
           <p key={i} style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>{t}</p>
@@ -1353,12 +1493,14 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Партнёр — 7 дом и Юпитер (карака мужа)</div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: partnerVm.bg, color: partnerVm.color }}>{partnerVm.label}</span>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{isEn ? "Partner — 7th house and Jupiter (karaka for the husband)" : "Партнёр — 7 дом и Юпитер (карака мужа)"}</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: partnerVm.bg, color: partnerVm.color }}>{houseVerdictLabel(partnerA.verdict, lang)}</span>
         </div>
         {partnerA.juTrait && (
           <p style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 6 }}>
-            Юпитер стоит в знаке {SIGNS[partnerA.juSign]} — по этому знаку в партнёре часто резонируют такие качества: {partnerA.juTrait}.
+            {isEn
+              ? `Jupiter sits in the sign of ${signName(partnerA.juSign, lang)} — this sign often resonates in a partner as: ${partnerA.juTrait}.`
+              : `Юпитер стоит в знаке ${signName(partnerA.juSign, lang)} — по этому знаку в партнёре часто резонируют такие качества: ${partnerA.juTrait}.`}
           </p>
         )}
         {partnerA.pluses.map((t, i) => (
@@ -1370,23 +1512,27 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
       </div>
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Лучшие периоды</div>
+        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>{isEn ? "Best periods" : "Лучшие периоды"}</div>
         <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 10, lineHeight: 1.5 }}>
-          По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни.
+          {isEn
+            ? "For each mahadasha period — how friendly its ruling planet is toward the themes of the 5th and 7th houses and Jupiter. Not about the antardashas within — a general estimate over the big periods of life."
+            : "По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни."}
         </div>
-        {!periods && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Дождитесь загрузки периодов на вкладке «Периоды жизни».</div>}
+        {!periods && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{isEn ? "Wait for the periods to load on the \"Life periods\" tab." : "Дождитесь загрузки периодов на вкладке «Периоды жизни»."}</div>}
         {bestChildren && bestPartner && (
           <div style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #2e2a5c" }}>
-            Для темы детей заметнее всего выглядит период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestChildren.lord]}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). Для партнёрства — период <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[bestPartner.lord]}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).
+            {isEn
+              ? <>For the theme of children, the most notable period is <b style={{ color: "#f1ede4" }}>{planetName(bestChildren.lord, lang)}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). For partnership — the period <b style={{ color: "#f1ede4" }}>{planetName(bestPartner.lord, lang)}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).</>
+              : <>Для темы детей заметнее всего выглядит период <b style={{ color: "#f1ede4" }}>{planetName(bestChildren.lord, lang)}</b> ({bestChildren.start?.toISOString().slice(0, 10)} — {bestChildren.end?.toISOString().slice(0, 10)}). Для партнёрства — период <b style={{ color: "#f1ede4" }}>{planetName(bestPartner.lord, lang)}</b> ({bestPartner.start?.toISOString().slice(0, 10)} — {bestPartner.end?.toISOString().slice(0, 10)}).</>}
           </div>
         )}
         {scored.map((p, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "6px 0", borderTop: i ? "1px solid #2e2a5c" : "none" }}>
-            <span style={{ color: "#f1ede4" }}>{PLANET_NAMES[p.lord]}</span>
+            <span style={{ color: "#f1ede4" }}>{planetName(p.lord, lang)}</span>
             <span style={{ color: "#766fa0", fontSize: 11 }}>{p.start?.toISOString().slice(0, 10)} — {p.end?.toISOString().slice(0, 10)}</span>
             <span style={{ display: "flex", gap: 6 }}>
-              <span title="Дети">Д {scoreBadge(p.childrenScore)}</span>
-              <span title="Партнёр">П {scoreBadge(p.partnerScore)}</span>
+              <span title={isEn ? "Children" : "Дети"}>{isEn ? "C" : "Д"} {scoreBadge(p.childrenScore)}</span>
+              <span title={isEn ? "Partner" : "Партнёр"}>{isEn ? "P" : "П"} {scoreBadge(p.partnerScore)}</span>
             </span>
           </div>
         ))}
@@ -1400,13 +1546,19 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
    ========================================================= */
 
 function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
   if (!data) return null;
   const total = data.total || {};
   const conclusion = data.conclusion || {};
   const pct = total.total_points ? Math.round((total.received_points / total.total_points) * 100) : 0;
-  const verdictRu = conclusion.status
-    ? `Благоприятное сочетание: ${total.received_points} из ${total.total_points} баллов (${pct}%) — выше минимума (${total.minimum_required}).`
-    : `Сочетание ниже традиционного порога: ${total.received_points} из ${total.total_points} баллов (${pct}%), минимум — ${total.minimum_required}. Это не приговор, но стоит внимательнее смотреть на слабые факторы ниже.`;
+  const verdictText = conclusion.status
+    ? (isEn
+      ? `Favorable match: ${total.received_points} out of ${total.total_points} points (${pct}%) — above the minimum (${total.minimum_required}).`
+      : `Благоприятное сочетание: ${total.received_points} из ${total.total_points} баллов (${pct}%) — выше минимума (${total.minimum_required}).`)
+    : (isEn
+      ? `The match is below the traditional threshold: ${total.received_points} out of ${total.total_points} points (${pct}%), minimum — ${total.minimum_required}. This isn't a verdict, but it's worth looking more closely at the weak factors below.`
+      : `Сочетание ниже традиционного порога: ${total.received_points} из ${total.total_points} баллов (${pct}%), минимум — ${total.minimum_required}. Это не приговор, но стоит внимательнее смотреть на слабые факторы ниже.`);
 
   const weakKoots = KOOT_ORDER
     .map((key) => ({ key, k: data[key] }))
@@ -1414,7 +1566,7 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
 
   return (
     <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginTop: 16 }}>
-      <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 12, fontWeight: 600 }}>Совместимость (Ashtakoota Guna Milan)</div>
+      <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 12, fontWeight: 600 }}>{isEn ? "Compatibility (Ashtakoota Guna Milan)" : "Совместимость (Ashtakoota Guna Milan)"}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {KOOT_ORDER.map((key) => {
           const k = data[key];
@@ -1423,7 +1575,7 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
           return (
             <div key={key}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#c9c4e8" }}>
-                <span>{KOOT_LABELS[key] || key}</span>
+                <span>{kootLabel(key, lang)}</span>
                 <span>{k.received_points} / {k.total_points}</span>
               </div>
               <div style={{ height: 5, background: "#2e2a5c", borderRadius: 3, marginTop: 3 }}>
@@ -1434,23 +1586,25 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
         })}
       </div>
       <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #2e2a5c" }}>
-        <div style={{ fontSize: 15, color: "#f1ede4", fontWeight: 700 }}>Итого: {total.received_points} / {total.total_points}</div>
-        <div style={{ fontSize: 13, color: conclusion.status ? "#8fd19e" : "#e0b98b", marginTop: 6, lineHeight: 1.55 }}>{verdictRu}</div>
+        <div style={{ fontSize: 15, color: "#f1ede4", fontWeight: 700 }}>{isEn ? "Total:" : "Итого:"} {total.received_points} / {total.total_points}</div>
+        <div style={{ fontSize: 13, color: conclusion.status ? "#8fd19e" : "#e0b98b", marginTop: 6, lineHeight: 1.55 }}>{verdictText}</div>
         {conclusion.report && (
           <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>
-            Комментарий (оригинал на английском): «{conclusion.report}»
+            {isEn ? "Comment (from AstrologyAPI, in English):" : "Комментарий (оригинал на английском):"} «{conclusion.report}»
           </div>
         )}
       </div>
 
       <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #2e2a5c" }}>
-        <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 6 }}>На что обратить внимание</div>
+        <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 6 }}>{isEn ? "Points to watch" : "На что обратить внимание"}</div>
         {weakKoots.length === 0 ? (
-          <p style={{ fontSize: 12, color: "#8fd19e", lineHeight: 1.55 }}>Слабых факторов не выявлено — все составляющие выше половины своего максимума.</p>
+          <p style={{ fontSize: 12, color: "#8fd19e", lineHeight: 1.55 }}>{isEn ? "No weak factors found — every component is above half of its maximum." : "Слабых факторов не выявлено — все составляющие выше половины своего максимума."}</p>
         ) : (
           <PaywallTeaser
-            title={`Найдено слабых факторов: ${weakKoots.length}`}
-            text="Что именно означает каждый слабый фактор и на что обратить внимание в паре — эта расшифровка ещё в разработке, появится отдельно."
+            title={isEn ? `Weak factors found: ${weakKoots.length}` : `Найдено слабых факторов: ${weakKoots.length}`}
+            text={isEn
+              ? "What exactly each weak factor means and what to watch for in the pair — this breakdown is still in development, it will appear separately."
+              : "Что именно означает каждый слабый фактор и на что обратить внимание в паре — эта расшифровка ещё в разработке, появится отдельно."}
             goalName="paywall_koots_hit"
           />
         )}
@@ -1459,69 +1613,101 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
   );
 }
 
-const TENSE_VERDICTS = ["напряжённая", "низкая"];
+const TENSE_VERDICTS = ["tense", "low"];
 
-function heuristicCompat(kind, chart1, chart2) {
+const REL_TO_VERDICT = { same: "high", friend: "good", neutral: "neutral", enemy: "tense" };
+
+function heuristicCompat(kind, chart1, chart2, lang) {
   if (!chart1?.details?.Mo || !chart2?.details?.Mo || !chart1?.details?.As || !chart2?.details?.As) return null;
   const moon1 = chart1.details.Mo, moon2 = chart2.details.Mo;
   const asc1 = chart1.details.As, asc2 = chart2.details.As;
+  const isEn = lang === "en";
+  const conj = isEn ? "and" : "и";
 
   const items = [];
   const g1 = ganaOf(moon1.nak), g2 = ganaOf(moon2.nak);
   const ganaVerdict = ganaCompat(g1, g2);
   items.push({
-    label: "Эмоциональный тон (гана Луны)", verdict: ganaVerdict, note: `${moon1.nakName} и ${moon2.nakName}`,
+    label: isEn ? "Emotional tone (Moon's gana)" : "Эмоциональный тон (гана Луны)",
+    verdict: ganaVerdict,
+    note: `${nakshatraName(moon1.nak, lang)} ${conj} ${nakshatraName(moon2.nak, lang)}`,
     tip: TENSE_VERDICTS.includes(ganaVerdict)
-      ? "Темпераменты ощутимо разные — не пытайтесь «выровнять» реакции друг друга, договоритесь заранее о разном темпе и о том, как каждый из вас остывает после разногласий."
-      : "Темпераменты близки по духу — конфликтов на этой почве, скорее всего, будет немного.",
+      ? (isEn
+        ? "Temperaments differ noticeably — don't try to \"even out\" each other's reactions; agree in advance on a different pace and on how each of you cools down after a disagreement."
+        : "Темпераменты ощутимо разные — не пытайтесь «выровнять» реакции друг друга, договоритесь заранее о разном темпе и о том, как каждый из вас остывает после разногласий.")
+      : (isEn
+        ? "Temperaments are close in spirit — conflicts on this basis are likely to be few."
+        : "Темпераменты близки по духу — конфликтов на этой почве, скорее всего, будет немного."),
   });
 
   const ec = elementCompat(elementOf(asc1.sign), elementOf(asc2.sign));
   items.push({
-    label: "Стиль поведения (стихии Асцендентов)", verdict: ec, note: `${asc1.signName} и ${asc2.signName}`,
+    label: isEn ? "Behavior style (Ascendant elements)" : "Стиль поведения (стихии Асцендентов)",
+    verdict: ec,
+    note: `${signName(asc1.sign, lang)} ${conj} ${signName(asc2.sign, lang)}`,
     tip: TENSE_VERDICTS.includes(ec)
-      ? "Разные стихии в поведении означают разные приоритеты в моменте — проговаривайте ожидания вслух, не полагайтесь, что партнёр «поймёт сам»."
-      : "Стили поведения совместимы — легче находить общий ритм в повседневных ситуациях.",
+      ? (isEn
+        ? "Different elements in behavior mean different priorities in the moment — say your expectations out loud, don't count on your partner to \"just know.\""
+        : "Разные стихии в поведении означают разные приоритеты в моменте — проговаривайте ожидания вслух, не полагайтесь, что партнёр «поймёт сам».")
+      : (isEn
+        ? "Behavior styles are compatible — it's easier to find a common rhythm in everyday situations."
+        : "Стили поведения совместимы — легче находить общий ритм в повседневных ситуациях."),
   });
 
   const houseNum = kind === "business" ? 10 : 11;
   const lord1 = signLordOf((asc1.sign + houseNum - 1) % 12);
   const lord2 = signLordOf((asc2.sign + houseNum - 1) % 12);
   const rel = relation(lord1, lord2);
-  const relRu = { same: "высокая", friend: "хорошая", neutral: "нейтральная", enemy: "напряжённая" }[rel];
+  const relVerdict = REL_TO_VERDICT[rel] || "neutral";
   items.push({
-    label: kind === "business" ? "Деловые устремления (управители 10 домов)" : "Круги общения (управители 11 домов)",
-    verdict: relRu, note: `${PLANET_NAMES[lord1]} и ${PLANET_NAMES[lord2]}`,
-    tip: TENSE_VERDICTS.includes(relRu)
+    label: isEn
+      ? (kind === "business" ? "Business drive (10th-house rulers)" : "Social circles (11th-house rulers)")
+      : (kind === "business" ? "Деловые устремления (управители 10 домов)" : "Круги общения (управители 11 домов)"),
+    verdict: relVerdict,
+    note: `${planetName(lord1, lang)} ${conj} ${planetName(lord2, lang)}`,
+    tip: TENSE_VERDICTS.includes(relVerdict)
       ? (kind === "business"
-        ? "Управители деловых домов в напряжении — вероятны разные стратегии риска и заработка; закрепите роли и зоны ответственности письменно, не полагайтесь, что «само разрулится»."
-        : "Управители кругов общения в напряжении — вероятен разный социальный ритм; не навязывайте свой темп общения другому.")
+        ? (isEn
+          ? "The rulers of the business houses are in tension — different strategies around risk and earnings are likely; put roles and areas of responsibility in writing, don't count on things \"sorting themselves out.\""
+          : "Управители деловых домов в напряжении — вероятны разные стратегии риска и заработка; закрепите роли и зоны ответственности письменно, не полагайтесь, что «само разрулится».")
+        : (isEn
+          ? "The rulers of the social-circle houses are in tension — a different social rhythm is likely; don't impose your own pace of socializing on the other."
+          : "Управители кругов общения в напряжении — вероятен разный социальный ритм; не навязывайте свой темп общения другому."))
       : (kind === "business"
-        ? "Управители деловых домов настроены дружественно — легче договориться о целях и распределении ролей."
-        : "Управители кругов общения настроены дружественно — вам, вероятно, легко на одной социальной волне."),
+        ? (isEn
+          ? "The rulers of the business houses are friendly toward each other — it's easier to agree on goals and the division of roles."
+          : "Управители деловых домов настроены дружественно — легче договориться о целях и распределении ролей.")
+        : (isEn
+          ? "The rulers of the social-circle houses are friendly toward each other — you're likely on the same social wavelength."
+          : "Управители кругов общения настроены дружественно — вам, вероятно, легко на одной социальной волне.")),
   });
 
   return items;
 }
 
-const VERDICT_COLOR = { "высокая": "#8fd19e", "хорошая": "#8fd19e", "средняя": "#e0c98b", "нейтральная": "#c9c4e8", "низкая": "#e0b98b", "напряжённая": "#e08b8b", "неизвестна": "#766fa0" };
+const VERDICT_COLOR = { high: "#8fd19e", good: "#8fd19e", medium: "#e0c98b", neutral: "#c9c4e8", low: "#e0b98b", tense: "#e08b8b", unknown: "#766fa0" };
 
 function HeuristicMatch({ kind, items }) {
+  const { lang } = useLang();
   if (!items) return null;
   return (
     <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginTop: 16 }}>
       <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 4, fontWeight: 600 }}>
-        {kind === "business" ? "Совместимость для делового партнёрства" : "Совместимость для дружбы"}
+        {lang === "en"
+          ? (kind === "business" ? "Compatibility for a business partnership" : "Compatibility for friendship")
+          : (kind === "business" ? "Совместимость для делового партнёрства" : "Совместимость для дружбы")}
       </div>
       <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 12, lineHeight: 1.5 }}>
-        Это не классическая Аштакута (она рассчитана только на брак) — практическая эвристика поверх реальных данных карты: Луна, Асцендент и управители профильных домов.
+        {lang === "en"
+          ? "This isn't classical Ashtakoota (which is designed for marriage only) — a practical heuristic over real chart data: the Moon, the Ascendant, and the rulers of the relevant houses."
+          : "Это не классическая Аштакута (она рассчитана только на брак) — практическая эвристика поверх реальных данных карты: Луна, Асцендент и управители профильных домов."}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {items.map((it, i) => (
           <div key={i} style={{ fontSize: 13, borderLeft: `2px solid ${TENSE_VERDICTS.includes(it.verdict) ? "#5c2f2f" : "#2f5c44"}`, paddingLeft: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div style={{ color: "#f1ede4" }}>{it.label}</div>
-              <div style={{ color: VERDICT_COLOR[it.verdict] || "#c9c4e8", fontWeight: 600, whiteSpace: "nowrap" }}>{it.verdict}</div>
+              <div style={{ color: VERDICT_COLOR[it.verdict] || "#c9c4e8", fontWeight: 600, whiteSpace: "nowrap" }}>{verdictLabel(it.verdict, lang)}</div>
             </div>
             <div style={{ color: "#8b84b8", fontSize: 11, marginTop: 1 }}>{it.note}</div>
             {it.tip && <div style={{ color: "#9089c9", fontSize: 12, lineHeight: 1.5, marginTop: 4 }}>{it.tip}</div>}
@@ -1537,6 +1723,8 @@ function HeuristicMatch({ kind, items }) {
    ========================================================= */
 
 function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
   const [status, setStatus] = useState(null);
   const [result, setResult] = useState(null);
   const [bestStatus, setBestStatus] = useState(null); // null | "loading" | "done"
@@ -1669,23 +1857,27 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12, lineHeight: 1.6 }}>
-        Релокация пересчитывает Асцендент и дома для той же секунды рождения, но в другой точке Земли (планеты по знакам почти не меняются, а вот дома — заметно). Ниже — подбор благоприятных мест по расширенному списку локаций со всех обитаемых континентов, либо проверка конкретного города вручную.
+        {isEn
+          ? "Relocation recalculates the Ascendant and the houses for the same moment of birth, but at a different point on Earth (planets barely shift by sign, but the houses shift noticeably). Below is a search for favorable places across an extended list of locations on every inhabited continent, or a manual check of a specific city."
+          : "Релокация пересчитывает Асцендент и дома для той же секунды рождения, но в другой точке Земли (планеты по знакам почти не меняются, а вот дома — заметно). Ниже — подбор благоприятных мест по расширенному списку локаций со всех обитаемых континентов, либо проверка конкретного города вручную."}
       </div>
 
-      {!orig && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Сначала дождитесь загрузки карты на вкладке «Карта».</div>}
+      {!orig && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{isEn ? "Wait for the chart to load on the \"Chart\" tab first." : "Сначала дождитесь загрузки карты на вкладке «Карта»."}</div>}
 
       {orig && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>Наилучшие варианты релокации</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>{isEn ? "Best relocation options" : "Наилучшие варианты релокации"}</div>
           <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 12, lineHeight: 1.5 }}>
-            Прикидка по {CANDIDATE_CITIES.length} точкам по всему миру — не только популярные столицы, но и менее очевидные места на каждом континенте: где благоприятные планеты попадают в сильные дома (1,4,5,7,9,10), а трудные — в спокойные (6,8,12), как это влияет на дом текущей махадаши, и отдельно — насколько силён управитель Асцендента (Лагна-лорд) в этой точке. Список большой, но конечный (пересчитать буквально каждую точку планеты за разумное время нереально) — эвристика поверх карты, не классическая методика подбора места. Можно сузить поиск до конкретной части света, либо проверить вручную любой город или координаты ниже.
+            {isEn
+              ? `A rough scan across ${CANDIDATE_CITIES.length} points around the world — not just popular capitals, but also less obvious places on every continent: where favorable planets land in strong houses (1,4,5,7,9,10) and difficult ones in calm houses (6,8,12), how this affects the house of the current mahadasha, and separately, how strong the Ascendant's own lord is at that point. The list is large but finite (recalculating literally every point on the planet in a reasonable time isn't realistic) — a heuristic over the chart, not a classical place-selection method. You can narrow the search to a specific region, or manually check any city or coordinates below.`
+              : `Прикидка по ${CANDIDATE_CITIES.length} точкам по всему миру — не только популярные столицы, но и менее очевидные места на каждом континенте: где благоприятные планеты попадают в сильные дома (1,4,5,7,9,10), а трудные — в спокойные (6,8,12), как это влияет на дом текущей махадаши, и отдельно — насколько силён управитель Асцендента (Лагна-лорд) в этой точке. Список большой, но конечный (пересчитать буквально каждую точку планеты за разумное время нереально) — эвристика поверх карты, не классическая методика подбора места. Можно сузить поиск до конкретной части света, либо проверить вручную любой город или координаты ниже.`}
           </div>
           <div style={{ marginBottom: 12, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>
-            <span style={labelStyle}>Часть света</span>
+            <span style={labelStyle}>{isEn ? "Region" : "Часть света"}</span>
             <select style={inputStyle} value={region} onChange={(e) => setRegion(e.target.value)}>
-              <option value="all">Весь мир ({CANDIDATE_CITIES.length})</option>
+              <option value="all">{isEn ? "Whole world" : "Весь мир"} ({CANDIDATE_CITIES.length})</option>
               {REGIONS.map((r) => (
-                <option key={r} value={r}>{r} ({CANDIDATE_CITIES.filter((c) => c.region === r).length})</option>
+                <option key={r} value={r}>{regionLabel(r, lang)} ({CANDIDATE_CITIES.filter((c) => c.region === r).length})</option>
               ))}
             </select>
           </div>
@@ -1694,13 +1886,17 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
             borderRadius: 20, padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: bestStatus === "loading" ? "default" : "pointer",
             opacity: bestStatus === "loading" ? 0.7 : 1,
           }}>
-            {bestStatus === "loading" ? `Проверяю ${bestProgress} из ${poolCities.length}…` : "Подобрать лучшие места"}
+            {bestStatus === "loading"
+              ? (isEn ? `Checking ${bestProgress} of ${poolCities.length}…` : `Проверяю ${bestProgress} из ${poolCities.length}…`)
+              : (isEn ? "Find the best places" : "Подобрать лучшие места")}
           </button>
 
           {bestStatus === "locked_scan" && (
             <PaywallTeaser
-              title="Подбор уже использован бесплатно"
-              text="Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Пересчёт для других данных рождения или другой части света — 1 запрос из пакета."
+              title={isEn ? "The search has already been used for free" : "Подбор уже использован бесплатно"}
+              text={isEn
+                ? "One full search for the best places for this birth data is free (the result above can be revisited without limits). Recalculating for different birth data or another region costs 1 request from the package."
+                : "Один полный подбор лучших мест для этих данных рождения — бесплатно (результат выше, можно пересматривать без ограничений). Пересчёт для других данных рождения или другой части света — 1 запрос из пакета."}
               goalName="paywall_relocation_scan_hit"
               account={account}
               onGoToPricing={onGoToPricing}
@@ -1730,20 +1926,22 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
 
       {orig && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>Проверить свой город</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>{isEn ? "Check your own city" : "Проверить свой город"}</div>
           <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(person.date)} />
         </div>
       )}
 
-      {status === "loading" && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Пересчитываю карту для новой точки…</div>}
-      {status === "error" && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Не удалось пересчитать — попробуйте ещё раз.</div>}
+      {status === "loading" && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{isEn ? "Recalculating the chart for the new location…" : "Пересчитываю карту для новой точки…"}</div>}
+      {status === "error" && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>{isEn ? "Couldn't recalculate — please try again." : "Не удалось пересчитать — попробуйте ещё раз."}</div>}
 
       {status === "locked" && result && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>Релокация в {result.label}</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>{isEn ? `Relocation to ${result.label}` : `Релокация в ${result.label}`}</div>
           <PaywallTeaser
-            title="Один город уже открыт бесплатно"
-            text={`Подробный разбор для «${unlockedCity}» остаётся доступен в любой момент. Ещё один город — 1 запрос из пакета.`}
+            title={isEn ? "One city is already unlocked for free" : "Один город уже открыт бесплатно"}
+            text={isEn
+              ? `The detailed breakdown for "${unlockedCity}" remains available at any time. One more city costs 1 request from the package.`
+              : `Подробный разбор для «${unlockedCity}» остаётся доступен в любой момент. Ещё один город — 1 запрос из пакета.`}
             goalName="paywall_relocation_hit"
             account={account}
             onGoToPricing={onGoToPricing}
@@ -1755,15 +1953,17 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
 
       {status === "ready" && result && orig && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>Релокация в {result.label}</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 10, fontWeight: 600 }}>{isEn ? `Relocation to ${result.label}` : `Релокация в ${result.label}`}</div>
 
           <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
-            Асцендент: {orig.As?.signName} → <b style={{ color: "#f1ede4" }}>{result.details.As?.signName}</b>
+            {isEn ? "Ascendant:" : "Асцендент:"} {signName(orig.As?.sign, lang)} → <b style={{ color: "#f1ede4" }}>{signName(result.details.As?.sign, lang)}</b>
           </p>
 
           {activeMahaLord && orig[activeMahaLord] && result.details[activeMahaLord] && (
             <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
-              Сейчас у вас идёт махадаша {PLANET_NAMES[activeMahaLord]}: {orig[activeMahaLord].house} дом → <b style={{ color: "#f1ede4" }}>{result.details[activeMahaLord].house} дом</b> ({HOUSE_MEANINGS[result.details[activeMahaLord].house]}) — пока вы там, тема этого дома звучит заметнее.
+              {isEn
+                ? <>You're currently in the {planetName(activeMahaLord, lang)} mahadasha: house {orig[activeMahaLord].house} → <b style={{ color: "#f1ede4" }}>house {result.details[activeMahaLord].house}</b> ({houseMeaning(result.details[activeMahaLord].house, lang)}) — while you're there, this house's theme sounds louder.</>
+                : <>Сейчас у вас идёт махадаша {planetName(activeMahaLord, lang)}: {orig[activeMahaLord].house} дом → <b style={{ color: "#f1ede4" }}>{result.details[activeMahaLord].house} дом</b> ({houseMeaning(result.details[activeMahaLord].house, lang)}) — пока вы там, тема этого дома звучит заметнее.</>}
             </p>
           )}
 
@@ -1773,17 +1973,21 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
             if (!origAscLord || !afterAscLord) return null;
             const afterHouse = result.details[afterAscLord]?.house;
             const strongNote = afterHouse
-              ? (STRONG_HOUSES.has(afterHouse) ? " — сильная позиция, вся карта держится увереннее" : DIFFICULT_HOUSES.has(afterHouse) ? " — позиция непростая, испытание для карты в целом" : "")
+              ? (STRONG_HOUSES.has(afterHouse) ? (isEn ? " — a strong position, the whole chart holds steadier" : " — сильная позиция, вся карта держится увереннее") : DIFFICULT_HOUSES.has(afterHouse) ? (isEn ? " — a tricky position, a test for the whole chart" : " — позиция непростая, испытание для карты в целом") : "")
               : "";
             return (
               <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
-                Управитель Асцендента: {PLANET_NAMES[origAscLord]} → <b style={{ color: "#f1ede4" }}>{PLANET_NAMES[afterAscLord]}</b>{afterHouse ? `, сам в ${afterHouse} доме (${HOUSE_MEANINGS[afterHouse]})` : ""}{strongNote}.
+                {isEn
+                  ? <>Ascendant lord: {planetName(origAscLord, lang)} → <b style={{ color: "#f1ede4" }}>{planetName(afterAscLord, lang)}</b>{afterHouse ? `, itself in house ${afterHouse} (${houseMeaning(afterHouse, lang)})` : ""}{strongNote}.</>
+                  : <>Управитель Асцендента: {planetName(origAscLord, lang)} → <b style={{ color: "#f1ede4" }}>{planetName(afterAscLord, lang)}</b>{afterHouse ? `, сам в ${afterHouse} доме (${houseMeaning(afterHouse, lang)})` : ""}{strongNote}.</>}
               </p>
             );
           })()}
 
           <div style={{ fontSize: 11, color: "#6f6798", marginTop: 10, lineHeight: 1.5 }}>
-            Ниже — та же логика, что и в общем рейтинге городов выше (благоприятные планеты в сильных домах, трудные — в слабых). Общий балл в рейтинге учитывает ещё и два больших отдельных фактора, не привязанных ни к одной конкретной сфере: в каком доме окажется управитель текущей махадаши, и насколько силён управитель самого Асцендента. Поэтому у высокого места в рейтинге отдельные сферы ниже вполне могут выглядеть скромно или почти не меняться — это не ошибка.
+            {isEn
+              ? "Below is the same logic as in the overall city ranking above (favorable planets in strong houses, difficult ones in calm houses). The overall ranking score also factors in two big standalone things not tied to any single area: which house the current mahadasha's lord ends up in, and how strong the Ascendant's own lord is. So a high-ranking place's individual areas below may well look modest or barely change — that isn't a mistake."
+              : "Ниже — та же логика, что и в общем рейтинге городов выше (благоприятные планеты в сильных домах, трудные — в слабых). Общий балл в рейтинге учитывает ещё и два больших отдельных фактора, не привязанных ни к одной конкретной сфере: в каком доме окажется управитель текущей махадаши, и насколько силён управитель самого Асцендента. Поэтому у высокого места в рейтинге отдельные сферы ниже вполне могут выглядеть скромно или почти не меняться — это не ошибка."}
           </div>
           <div style={{ marginTop: 8 }}>
             {(() => {
@@ -1793,11 +1997,11 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
                 const before = domainScore(dm, origRows);
                 const after = domainScore(dm, afterRows);
                 const diff = after - before;
-                const verdict = diff > 0 ? "выглядит сильнее" : diff < 0 ? "выглядит слабее" : "без изменений";
+                const verdict = diff > 0 ? (isEn ? "looks stronger" : "выглядит сильнее") : diff < 0 ? (isEn ? "looks weaker" : "выглядит слабее") : (isEn ? "unchanged" : "без изменений");
                 const color = diff > 0 ? "#8fd19e" : diff < 0 ? "#e0b98b" : "#c9c4e8";
                 return (
                   <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", borderTop: "1px solid #2e2a5c" }}>
-                    <span style={{ color: "#f1ede4" }}>{dm.title}</span>
+                    <span style={{ color: "#f1ede4" }}>{domainTitle(key, lang)}</span>
                     <span style={{ color }}>{verdict} ({before > 0 ? "+" : ""}{before} → {after > 0 ? "+" : ""}{after})</span>
                   </div>
                 );
@@ -1859,14 +2063,18 @@ function saveSavedPerson(key, person) {
 // Типы событий для ректификации — дом, который проверяется на резонанс с текущей
 // дашой на дату события (классические карaки/дома для каждого типа событий).
 const EVENT_TYPES = [
-  { id: "marriage", label: "Брак / отношения", house: 7 },
-  { id: "child", label: "Рождение ребёнка", house: 5 },
-  { id: "career", label: "Карьера / статус", house: 10 },
-  { id: "relocation", label: "Переезд", house: 4 },
-  { id: "health", label: "Здоровье / кризис", house: 8 },
-  { id: "loss", label: "Утрата близкого", house: 8 },
-  { id: "education", label: "Образование", house: 9 },
+  { id: "marriage", label: "Брак / отношения", labelEn: "Marriage / relationship", house: 7 },
+  { id: "child", label: "Рождение ребёнка", labelEn: "Birth of a child", house: 5 },
+  { id: "career", label: "Карьера / статус", labelEn: "Career / status", house: 10 },
+  { id: "relocation", label: "Переезд", labelEn: "Relocation", house: 4 },
+  { id: "health", label: "Здоровье / кризис", labelEn: "Health / crisis", house: 8 },
+  { id: "loss", label: "Утрата близкого", labelEn: "Loss of a loved one", house: 8 },
+  { id: "education", label: "Образование", labelEn: "Education", house: 9 },
 ];
+function eventTypeLabel(meta, lang) {
+  if (!meta) return "";
+  return lang === "en" ? (meta.labelEn || meta.label) : meta.label;
+}
 
 function buildCandidateTimes(fromTime, toTime, stepMin) {
   const toMin = (t) => { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
@@ -1891,6 +2099,8 @@ function buildCandidateTimes(fromTime, toTime, stepMin) {
    времени остаётся за астрологом. Один расчёт = 1 запрос из пакета (несколько кандидатов —
    несколько обращений к AstrologyAPI внутри одного "запроса" пакета, отсюда лимит в 15 кандидатов). */
 function RectificationPanel({ person, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
   const [date, setDate] = useState(person?.date || "");
   const [fromTime, setFromTime] = useState("12:00");
   const [toTime, setToTime] = useState("14:00");
@@ -1931,11 +2141,11 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
 
   const run = useCallback(async () => {
     if (!date || lat === "" || lon === "" || !times.length) {
-      setResult({ loading: false, error: "Заполните дату, место и корректный диапазон времени («до» позже «от»).", locked: false, candidates: null });
+      setResult({ loading: false, error: isEn ? "Fill in the date, place, and a valid time range (\"to\" later than \"from\")." : "Заполните дату, место и корректный диапазон времени («до» позже «от»).", locked: false, candidates: null });
       return;
     }
     if (!validEvents.length) {
-      setResult({ loading: false, error: "Добавьте хотя бы одно событие с известной датой.", locked: false, candidates: null });
+      setResult({ loading: false, error: isEn ? "Add at least one event with a known date." : "Добавьте хотя бы одно событие с известной датой.", locked: false, candidates: null });
       return;
     }
 
@@ -2016,14 +2226,14 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
           });
           candidates.push({ time, ascSign: details.As?.sign, ascDeg: details.As?.lon, score, breakdown, error: null });
         } catch (e2) {
-          candidates.push({ time, error: e2.message || "Ошибка запроса", score: -1, breakdown: [] });
+          candidates.push({ time, error: e2.message || (isEn ? "Request error" : "Ошибка запроса"), score: -1, breakdown: [] });
         }
       }
       candidates.sort((a, b) => b.score - a.score);
       setResult({ loading: false, error: null, locked: false, candidates });
       ymGoal("rectify_calculated");
     } catch (e) {
-      setResult({ loading: false, error: e.message || "Не удалось выполнить расчёт", locked: false, candidates: null });
+      setResult({ loading: false, error: e.message || (isEn ? "Couldn't complete the calculation" : "Не удалось выполнить расчёт"), locked: false, candidates: null });
     }
   }, [date, fromTime, toTime, stepMin, lat, lon, tz, events, account, requestKey, times, validEvents]);
 
@@ -2032,52 +2242,50 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
-        Инструмент для уточнения неизвестного времени рождения по известным жизненным событиям.
-        Для каждого времени-кандидата в выбранном диапазоне считается, совпадает ли планета,
-        управляющая дашой/антардашой на дату события, с домом, за который это событие обычно
-        отвечает (владение или присутствие в доме). Это метод-подсказка для профессионального
-        анализа, а не готовый ответ — финальный выбор времени остаётся за вами.
+        {isEn
+          ? "A tool for narrowing down an unknown birth time from known life events. For each candidate time in the chosen range, it checks whether the planet ruling the dasha/antardasha on the event's date matches the house that event usually belongs to (rulership or presence in the house). This is a method to guide professional analysis, not a ready-made answer — the final choice of time is yours."
+          : "Инструмент для уточнения неизвестного времени рождения по известным жизненным событиям. Для каждого времени-кандидата в выбранном диапазоне считается, совпадает ли планета, управляющая дашой/антардашой на дату события, с домом, за который это событие обычно отвечает (владение или присутствие в доме). Это метод-подсказка для профессионального анализа, а не готовый ответ — финальный выбор времени остаётся за вами."}
       </div>
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>Дата и диапазон времени рождения</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{isEn ? "Birth date and time range" : "Дата и диапазон времени рождения"}</div>
           {person && (
             <button onClick={prefillFromChart} style={{
               background: "none", border: "1px solid #332c66", color: "#9089c9", borderRadius: 14,
               padding: "4px 10px", fontSize: 11, cursor: "pointer",
-            }}>заполнить из вкладки «Карта»</button>
+            }}>{isEn ? "fill in from the \"Chart\" tab" : "заполнить из вкладки «Карта»"}</button>
           )}
         </div>
         <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-          <div><span style={labelStyle}>Дата рождения</span><input style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-          <div><span style={labelStyle}>От (примерно не раньше)</span><input style={inputStyle} type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} /></div>
-          <div><span style={labelStyle}>До (примерно не позже)</span><input style={inputStyle} type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "Birth date" : "Дата рождения"}</span><input style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "From (approx. not earlier)" : "От (примерно не раньше)"}</span><input style={inputStyle} type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "To (approx. not later)" : "До (примерно не позже)"}</span><input style={inputStyle} type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} /></div>
         </div>
         <div style={{ marginBottom: 10 }}>
-          <span style={labelStyle}>Шаг перебора, минут</span>
+          <span style={labelStyle}>{isEn ? "Step, minutes" : "Шаг перебора, минут"}</span>
           <input style={{ ...inputStyle, maxWidth: 120 }} type="number" min={5} step={5} value={stepMin} onChange={(e) => setStepMin(e.target.value)} />
         </div>
 
         <GeoSearch onPick={handlePick} dateForTz={birthDateForApi(date)} />
 
         <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          <div><span style={labelStyle}>Широта</span><input style={inputStyle} type="number" step="0.01" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
-          <div><span style={labelStyle}>Долгота</span><input style={inputStyle} type="number" step="0.01" value={lon} onChange={(e) => setLon(e.target.value)} /></div>
-          <div><span style={labelStyle}>Часовой пояс (UTC+)</span><input style={inputStyle} type="number" step="0.5" value={tz} onChange={(e) => setTz(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "Latitude" : "Широта"}</span><input style={inputStyle} type="number" step="0.01" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "Longitude" : "Долгота"}</span><input style={inputStyle} type="number" step="0.01" value={lon} onChange={(e) => setLon(e.target.value)} /></div>
+          <div><span style={labelStyle}>{isEn ? "Time zone (UTC+)" : "Часовой пояс (UTC+)"}</span><input style={inputStyle} type="number" step="0.5" value={tz} onChange={(e) => setTz(e.target.value)} /></div>
         </div>
       </div>
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Известные события</div>
+        <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>{isEn ? "Known events" : "Известные события"}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {events.map((e) => (
             <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1.5fr auto", gap: 8, alignItems: "center" }}>
               <select style={inputStyle} value={e.type} onChange={(ev) => updateEvent(e.id, { type: ev.target.value })}>
-                {EVENT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                {EVENT_TYPES.map((t) => <option key={t.id} value={t.id}>{eventTypeLabel(t, lang)}</option>)}
               </select>
               <input style={inputStyle} type="date" value={e.date} onChange={(ev) => updateEvent(e.id, { date: ev.target.value })} />
-              <input style={inputStyle} placeholder="заметка (необязательно)" value={e.note} onChange={(ev) => updateEvent(e.id, { note: ev.target.value })} />
+              <input style={inputStyle} placeholder={isEn ? "note (optional)" : "заметка (необязательно)"} value={e.note} onChange={(ev) => updateEvent(e.id, { note: ev.target.value })} />
               <button onClick={() => removeEvent(e.id)} style={{
                 background: "none", border: "1px solid #332c66", color: "#e0a8a8", borderRadius: 14,
                 width: 28, height: 28, cursor: "pointer", fontSize: 14,
@@ -2088,26 +2296,29 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
         <button onClick={addEvent} style={{
           marginTop: 10, background: "none", border: "1px dashed #4a4088", color: "#9089c9",
           borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer",
-        }}>+ добавить событие</button>
+        }}>{isEn ? "+ add an event" : "+ добавить событие"}</button>
       </div>
 
       <div style={{ marginBottom: 10, fontSize: 11, color: "#6f6798" }}>
-        Кандидатов времени в диапазоне: {times.length || 0}. Один расчёт спишет 1 запрос из пакета
-        (внутри — до {estimatedCalls} обращений к AstrologyAPI, повтор с теми же данными — бесплатно).
+        {isEn
+          ? <>Candidate times in range: {times.length || 0}. One calculation costs 1 request from the package (internally — up to {estimatedCalls} calls to AstrologyAPI; repeating with the same data is free).</>
+          : <>Кандидатов времени в диапазоне: {times.length || 0}. Один расчёт спишет 1 запрос из пакета (внутри — до {estimatedCalls} обращений к AstrologyAPI, повтор с теми же данными — бесплатно).</>}
       </div>
 
       <button onClick={run} disabled={result.loading} style={{
         background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
         padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: result.loading ? "default" : "pointer",
         opacity: result.loading ? 0.7 : 1, marginBottom: 16,
-      }}>{result.loading ? "Считаю…" : "Рассчитать"}</button>
+      }}>{result.loading ? (isEn ? "Calculating…" : "Считаю…") : (isEn ? "Calculate" : "Рассчитать")}</button>
 
       {result.error && <div style={{ color: "#e08b8b", fontSize: 13, marginBottom: 12 }}>{result.error}</div>}
 
       {result.locked && (
         <PaywallTeaser
-          title="Ректификация — уточнение времени рождения"
-          text="Расчёт по нескольким кандидатам времени задействует несколько обращений к AstrologyAPI, поэтому доступен из пакета запросов (1 запрос на расчёт, повтор с теми же данными — бесплатно)."
+          title={isEn ? "Rectification — narrowing down the birth time" : "Ректификация — уточнение времени рождения"}
+          text={isEn
+            ? "Calculating across several candidate times uses several calls to AstrologyAPI, so it's available from the request package (1 request per calculation; repeating with the same data is free)."
+            : "Расчёт по нескольким кандидатам времени задействует несколько обращений к AstrologyAPI, поэтому доступен из пакета запросов (1 запрос на расчёт, повтор с теми же данными — бесплатно)."}
           goalName="paywall_rectify_hit"
           account={account}
           onGoToPricing={onGoToPricing}
@@ -2118,20 +2329,20 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
 
       {result.candidates && (
         <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>Результат по кандидатам</div>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>{isEn ? "Result by candidate" : "Результат по кандидатам"}</div>
           <div style={{ fontSize: 10.5, color: "#766fa0", marginBottom: 10, lineHeight: 1.8, display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <span><span style={{ color: "#7fd99a" }}>●</span> антардаша владеет/стоит в нужном доме (вес 3)</span>
-            <span><span style={{ color: "#e8c46b" }}>●</span> совпадение только на уровне махадаши (вес 1)</span>
-            <span><span style={{ color: "#4a4570" }}>●</span> совпадения нет · буква в кружке — первая буква типа события</span>
+            <span><span style={{ color: "#7fd99a" }}>●</span> {isEn ? "antardasha rules/sits in the right house (weight 3)" : "антардаша владеет/стоит в нужном доме (вес 3)"}</span>
+            <span><span style={{ color: "#e8c46b" }}>●</span> {isEn ? "match only at the mahadasha level (weight 1)" : "совпадение только на уровне махадаши (вес 1)"}</span>
+            <span><span style={{ color: "#4a4570" }}>●</span> {isEn ? "no match · the letter in the circle is the event type's first letter" : "совпадения нет · буква в кружке — первая буква типа события"}</span>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ color: "#9089c9", textAlign: "left" }}>
-                  <th style={{ padding: 6 }}>Время</th>
-                  <th style={{ padding: 6 }}>Асцендент</th>
-                  <th style={{ padding: 6 }}>Сумма</th>
-                  <th style={{ padding: 6 }}>События</th>
+                  <th style={{ padding: 6 }}>{isEn ? "Time" : "Время"}</th>
+                  <th style={{ padding: 6 }}>{isEn ? "Ascendant" : "Асцендент"}</th>
+                  <th style={{ padding: 6 }}>{isEn ? "Total" : "Сумма"}</th>
+                  <th style={{ padding: 6 }}>{isEn ? "Events" : "События"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2139,7 +2350,7 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
                   <tr key={c.time} style={{ borderTop: "1px solid #2e2a5c", background: i === 0 && !c.error ? "#211c47" : "transparent" }}>
                     <td style={{ padding: 6, color: i === 0 && !c.error ? "#e8c46b" : "#f1ede4", fontWeight: i === 0 ? 700 : 400 }}>{c.time}</td>
                     <td style={{ color: "#c9c4e8", padding: 6 }}>
-                      {c.error ? <span style={{ color: "#e08b8b" }}>{c.error}</span> : `${SIGNS[c.ascSign] || "—"} ${c.ascDeg != null ? Number(c.ascDeg).toFixed(1) + "°" : ""}`}
+                      {c.error ? <span style={{ color: "#e08b8b" }}>{c.error}</span> : `${signName(c.ascSign, lang) || "—"} ${c.ascDeg != null ? Number(c.ascDeg).toFixed(1) + "°" : ""}`}
                     </td>
                     <td style={{ color: "#c9c4e8", padding: 6, fontWeight: 700 }}>{c.error ? "—" : c.score}</td>
                     <td style={{ padding: 6 }}>
@@ -2147,13 +2358,13 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
                         {(c.breakdown || []).map((b, bi) => {
                           const meta = EVENT_TYPES.find((t) => t.id === b.type);
                           const color = b.matched === "antar" ? "#7fd99a" : b.matched === "maha" ? "#e8c46b" : "#4a4570";
-                          const verdict = b.matched === "antar" ? "антардаша владеет/стоит в доме" : b.matched === "maha" ? "махадаша владеет/стоит в доме" : "совпадения нет";
+                          const verdict = b.matched === "antar" ? (isEn ? "antardasha rules/sits in the house" : "антардаша владеет/стоит в доме") : b.matched === "maha" ? (isEn ? "mahadasha rules/sits in the house" : "махадаша владеет/стоит в доме") : (isEn ? "no match" : "совпадения нет");
                           return (
-                            <span key={bi} title={`${meta?.label || b.type} (${b.date}): ${verdict}`} style={{
+                            <span key={bi} title={`${eventTypeLabel(meta, lang) || b.type} (${b.date}): ${verdict}`} style={{
                               display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18,
                               borderRadius: "50%", background: `${color}33`, border: `1px solid ${color}`,
                               fontSize: 9, color, fontWeight: 700,
-                            }}>{(meta?.label || "?")[0]}</span>
+                            }}>{(eventTypeLabel(meta, lang) || "?")[0]}</span>
                           );
                         })}
                       </div>
@@ -2203,7 +2414,7 @@ function JyotishAppInner() {
       // Тестовый режим (ключи ЮKassa ещё не подключены на бэкенде) — пакет уже "оплачен", просто обновляем статус.
       await refreshAccount();
     } catch (e) {
-      alert(e.message || "Не удалось начать оплату. Попробуйте ещё раз.");
+      alert(e.message || (lang === "en" ? "Couldn't start the payment. Please try again." : "Не удалось начать оплату. Попробуйте ещё раз."));
     } finally {
       setBuying(false);
     }
@@ -2212,9 +2423,9 @@ function JyotishAppInner() {
   // где человек выбирает нужный размер пакета сам.
   const goToPricing = useCallback(() => setTab("pricing"), []);
 
-  const chart1 = useBirthChart(person1, "chart_calculated");
-  const chart2 = useBirthChart(person2, "partner_chart_calculated");
-  const dasha1 = useMajorDasha(person1);
+  const chart1 = useBirthChart(person1, "chart_calculated", lang);
+  const chart2 = useBirthChart(person2, "partner_chart_calculated", lang);
+  const dasha1 = useMajorDasha(person1, lang);
 
   const now = new Date();
   const activeMaha = dasha1.periods?.find((p) => p.start && p.end && now >= p.start && now < p.end);
@@ -2255,11 +2466,11 @@ function JyotishAppInner() {
       setMatchCache({ key: matchKey, data });
       ymGoal("compat_marriage_calculated");
     } catch (e) {
-      setMatchState({ loading: false, error: e.message || "Не удалось рассчитать совместимость", data: null, locked: false });
+      setMatchState({ loading: false, error: e.message || (lang === "en" ? "Couldn't calculate compatibility" : "Не удалось рассчитать совместимость"), data: null, locked: false });
     }
   }, [person1, person2, matchCache, matchKey, account]);
 
-  const heuristicItems = matchKind !== "marriage" ? heuristicCompat(matchKind, chart1, chart2) : null;
+  const heuristicItems = matchKind !== "marriage" ? heuristicCompat(matchKind, chart1, chart2, lang) : null;
 
   const tabs = [
     { id: "chart", label: t("tab_chart") },
@@ -2304,10 +2515,11 @@ function JyotishAppInner() {
             <>
               <ChartWheel details={chart1.details} />
               <div style={{ marginTop: 16, background: "#1c1846", borderRadius: 10, padding: 16 }}>
-                <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>Личность (по Асценденту и Луне)</div>
+                <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>{lang === "en" ? "Personality (by Ascendant and Moon)" : "Личность (по Асценденту и Луне)"}</div>
                 <p style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6 }}>
-                  Асцендент в {chart1.details.As?.signName} — базовые качества: {SIGN_TRAITS[chart1.details.As?.sign]}.
-                  {" "}Луна в накшатре «{chart1.details.Mo?.nakName}» ({chart1.details.Mo?.signName}) — эмоциональная природа склоняется к: {SIGN_TRAITS[chart1.details.Mo?.sign]}.
+                  {lang === "en"
+                    ? <>Ascendant in {signName(chart1.details.As?.sign, lang)} — core qualities: {signTraits(chart1.details.As?.sign, lang)}.{" "}Moon in the nakshatra "{nakshatraName(chart1.details.Mo?.nak, lang)}" ({signName(chart1.details.Mo?.sign, lang)}) — the emotional nature leans toward: {signTraits(chart1.details.Mo?.sign, lang)}.</>
+                    : <>Асцендент в {signName(chart1.details.As?.sign, lang)} — базовые качества: {signTraits(chart1.details.As?.sign, lang)}.{" "}Луна в накшатре «{nakshatraName(chart1.details.Mo?.nak, lang)}» ({signName(chart1.details.Mo?.sign, lang)}) — эмоциональная природа склоняется к: {signTraits(chart1.details.Mo?.sign, lang)}.</>}
                 </p>
               </div>
               <PlanetTable details={chart1.details} />
@@ -2319,10 +2531,12 @@ function JyotishAppInner() {
       {tab === "dasha" && (
         <div style={{ fontFamily: "system-ui, sans-serif" }}>
           <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12 }}>
-            Вимшоттари даша — все 3 уровня: махадаша → антардаша → пратьянтардаша, у каждого своя дата начала и конца. Клик по строке махадаши раскрывает её антардаши с разбором; клик по строке «под-периоды» под нужной антардашей — раскрывает её собственные пратьянтардаши (свои даты внутри родительского периода), каждая — с коротким «+» (сильная сторона) и «−» (на что обратить внимание).
+            {lang === "en"
+              ? "Vimshottari dasha — all 3 levels: mahadasha → antardasha → pratyantardasha, each with its own start and end date. Clicking a mahadasha row expands its antardashas with a breakdown; clicking the \"sub-periods\" row under an antardasha expands its own pratyantardashas (their own dates within the parent period), each with a short \"+\" (strength) and \"−\" (what to watch)."
+              : "Вимшоттари даша — все 3 уровня: махадаша → антардаша → пратьянтардаша, у каждого своя дата начала и конца. Клик по строке махадаши раскрывает её антардаши с разбором; клик по строке «под-периоды» под нужной антардашей — раскрывает её собственные пратьянтардаши (свои даты внутри родительского периода), каждая — с коротким «+» (сильная сторона) и «−» (на что обратить внимание)."}
           </div>
-          {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>Загрузка даши…</div>}
-          {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>Ошибка: {dasha1.error}</div>}
+          {dasha1.loading && <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{t("loading_dasha")}</div>}
+          {dasha1.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13 }}>{t("error_prefix")}: {dasha1.error}</div>}
           {dasha1.periods && <DashaTimeline birth={person1} periods={dasha1.periods} details={chart1.details} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
         </div>
       )}
@@ -2336,7 +2550,7 @@ function JyotishAppInner() {
           <BirthForm person={person2} setPerson={setPerson2} label={t("form_label_second")} />
 
           <div style={{ display: "flex", gap: 6, marginBottom: 16, justifyContent: "center" }}>
-            {[["marriage", "Брак"], ["business", "Бизнес-партнёрство"], ["friendship", "Дружба"]].map(([id, lbl]) => (
+            {[["marriage", lang === "en" ? "Marriage" : "Брак"], ["business", lang === "en" ? "Business partnership" : "Бизнес-партнёрство"], ["friendship", lang === "en" ? "Friendship" : "Дружба"]].map(([id, lbl]) => (
               <button key={id} onClick={() => { setMatchKind(id); if (id !== "marriage") ymGoal(`compat_${id}_viewed`); }} style={{
                 background: matchKind === id ? "#332c66" : "#1c1846", color: matchKind === id ? "#f1ede4" : "#8b84b8",
                 border: "1px solid #332c66", borderRadius: 16, padding: "6px 14px", fontSize: 12, cursor: "pointer",
@@ -2346,12 +2560,12 @@ function JyotishAppInner() {
 
           <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 6, textAlign: "center" }}>{person1.name || "Профиль 1"}</div>
-              {chart1.details ? <ChartWheel details={chart1.details} /> : <div style={{ fontSize: 12, color: "#8b84b8", textAlign: "center" }}>Загрузка…</div>}
+              <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 6, textAlign: "center" }}>{person1.name || (lang === "en" ? "Profile 1" : "Профиль 1")}</div>
+              {chart1.details ? <ChartWheel details={chart1.details} /> : <div style={{ fontSize: 12, color: "#8b84b8", textAlign: "center" }}>{lang === "en" ? "Loading…" : "Загрузка…"}</div>}
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 6, textAlign: "center" }}>{person2.name || "Профиль 2"}</div>
-              {chart2.details ? <ChartWheel details={chart2.details} /> : <div style={{ fontSize: 12, color: "#8b84b8", textAlign: "center" }}>Загрузка…</div>}
+              <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 6, textAlign: "center" }}>{person2.name || (lang === "en" ? "Profile 2" : "Профиль 2")}</div>
+              {chart2.details ? <ChartWheel details={chart2.details} /> : <div style={{ fontSize: 12, color: "#8b84b8", textAlign: "center" }}>{lang === "en" ? "Loading…" : "Загрузка…"}</div>}
             </div>
           </div>
 
@@ -2361,13 +2575,15 @@ function JyotishAppInner() {
                 display: "block", margin: "0 auto", background: "#e8c46b", color: "#151233", border: "none",
                 borderRadius: 20, padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
               }}>
-                {matchState.loading ? "Считаю…" : "Рассчитать совместимость (Аштакута)"}
+                {matchState.loading ? (lang === "en" ? "Calculating…" : "Считаю…") : (lang === "en" ? "Calculate compatibility (Ashtakoota)" : "Рассчитать совместимость (Аштакута)")}
               </button>
-              {matchState.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13, marginTop: 10 }}>Ошибка: {matchState.error}</div>}
+              {matchState.error && <div style={{ textAlign: "center", color: "#e08b8b", fontSize: 13, marginTop: 10 }}>{t("error_prefix")}: {matchState.error}</div>}
               {matchState.locked && (
                 <PaywallTeaser
-                  title="Первая проверка уже использована бесплатно"
-                  text="Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Проверка с другими данными рождения — 1 запрос из пакета."
+                  title={lang === "en" ? "The first check has already been used for free" : "Первая проверка уже использована бесплатно"}
+                  text={lang === "en"
+                    ? "Compatibility calculation (Ashtakoota) is free once per couple. Checking with different birth data costs 1 request from the package."
+                    : "Расчёт совместимости (Аштакута) — бесплатно один раз для одной пары. Проверка с другими данными рождения — 1 запрос из пакета."}
                   goalName="paywall_compat_hit"
                   account={account}
                   onGoToPricing={goToPricing}
