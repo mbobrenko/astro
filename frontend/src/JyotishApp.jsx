@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { LangProvider, useLang } from "./i18n.jsx";
-import { OFERTA_SECTIONS } from "./ofertaText.js";
+import { OFERTA_SECTIONS, OFERTA_SECTIONS_EN } from "./ofertaText.js";
 import {
   fetchPlanets,
   fetchMajorDasha,
@@ -197,6 +197,17 @@ const KOOT_WATCH_MEANING = {
   gan: "темпераменты заметно разные — не переубеждайте друг друга, а договаривайтесь о правилах и ритме заранее.",
   bhakut: "крупные жизненные цели и планы могут расходиться — сверяйте долгосрочные планы регулярно, не полагайтесь, что «само сложится».",
   nadi: "по классике это самый весомый фактор совместимости — стоит отнестись к нему внимательнее остальных, даже если общий балл неплохой.",
+};
+
+const KOOT_WATCH_MEANING_EN = {
+  varna: "you may read roles and hierarchy in the relationship differently — spell out expectations explicitly rather than assuming they're obvious to both of you.",
+  vashya: "there may be an imbalance of influence — one partner will naturally tend to lead, the other to yield more often; make sure decisions actually get made together.",
+  tara: "pay closer attention to each other's health and everyday stability — don't let wellbeing and routine drift on their own.",
+  yoni: "physical compatibility may take more time and patience to settle than it seems at the start — don't rush this.",
+  maitri: "your ways of thinking and reasoning can differ noticeably — don't expect your partner to reason \"like you do\"; look for common ground deliberately.",
+  gan: "temperaments are noticeably different — instead of trying to convince each other, agree on rules and pace in advance.",
+  bhakut: "major life goals and plans may diverge — check in on long-term plans regularly rather than assuming things will just work out.",
+  nadi: "classically the single most important compatibility factor — worth paying closer attention to than the rest, even when the overall score looks decent.",
 };
 
 const GRID_POS = {
@@ -538,11 +549,11 @@ function OfertaModal({ onClose }) {
         </div>
         <div style={{ fontSize: 12.5, color: "#9089c9", marginBottom: 18, lineHeight: 1.55 }}>
           {isEn
-            ? "Below is the Russian-language public offer that governs paid services on this site (the provider is a self-employed individual under Russian law). An English summary will be added separately."
-            : "Сервис «Ведическая астрология» (astro-gold-three.vercel.app). Документ регулирует оказание платных услуг Сервиса и является публичной офертой в соответствии со ст. 437 ГК РФ."}
+            ? "These terms govern paid features of the \u201cVedic Astrology\u201d Service (astro-gold-three.vercel.app)."
+            : "Эти условия регулируют платные функции Сервиса «Ведическая астрология» (astro-gold-three.vercel.app)."}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {OFERTA_SECTIONS.map((sec) => (
+          {(isEn ? OFERTA_SECTIONS_EN : OFERTA_SECTIONS).map((sec) => (
             <div key={sec.title}>
               <div style={{ fontSize: 14, color: "#e8c46b", fontWeight: 600, marginBottom: 6 }}>{sec.title}</div>
               {sec.body.split("\n\n").map((para, i) => (
@@ -1297,7 +1308,7 @@ const HOUSE_VERDICT_META = {
 const HOUSE_VERDICT_META_LABEL_EN = { good: "Strong area", mixed: "Mixed picture", watch: "Needs attention" };
 function houseVerdictLabel(v, lang) { return lang === "en" ? HOUSE_VERDICT_META_LABEL_EN[v] : HOUSE_VERDICT_META[v]?.label; }
 
-function HousesPanel({ details }) {
+function HousesPanel({ details, account, onGoToPricing, packageInfo, buying }) {
   const { lang } = useLang();
   if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{lang === "en" ? "Please wait for the chart to load on the \"Chart\" tab first." : "Сначала дождитесь загрузки карты на вкладке «Карта»."}</div>;
   const ascSignIdx = details.As.sign ?? 0;
@@ -1311,7 +1322,11 @@ function HousesPanel({ details }) {
           : `Дома считаются от Асцендента (${signName(ascSignIdx, lang)}). По каждой сфере — плюсы, на что обратить внимание и что практически можно поправить.`}
       </div>
 
-      {Object.entries(DOMAIN_META).map(([key]) => {
+      {(() => {
+        const domainEntries = Object.entries(DOMAIN_META);
+        const unlocked = !!account?.hasActivePackage;
+        return domainEntries.map(([key], idx) => {
+        if (idx > 0 && !unlocked) return null;
         const a = assessDomain(key, rows, lang);
         const vm = HOUSE_VERDICT_META[a.verdict];
         return (
@@ -1358,7 +1373,22 @@ function HousesPanel({ details }) {
             </div>
           </div>
         );
-      })}
+        });
+      })()}
+
+      {!(!!account?.hasActivePackage) && Object.keys(DOMAIN_META).length > 1 && (
+        <PaywallTeaser
+          title={lang === "en" ? `${Object.keys(DOMAIN_META).length - 1} more spheres` : `Ещё ${Object.keys(DOMAIN_META).length - 1} сферы`}
+          text={lang === "en"
+            ? "The full breakdown (pluses, points to watch, what can be improved) for family, children, destiny and social circle — available with an active request package."
+            : "Полный разбор (плюсы, на что обратить внимание, что можно поправить) для семьи, детей, судьбы и окружения — доступен с активным пакетом запросов."}
+          goalName="paywall_houses_hit"
+          account={account}
+          onGoToPricing={onGoToPricing}
+          packageInfo={packageInfo}
+          buying={buying}
+        />
+      )}
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>{lang === "en" ? "All 12 houses" : "Все 12 домов"}</div>
@@ -1705,13 +1735,26 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
         <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 6 }}>{isEn ? "Points to watch" : "На что обратить внимание"}</div>
         {weakKoots.length === 0 ? (
           <p style={{ fontSize: 12, color: "#8fd19e", lineHeight: 1.55 }}>{isEn ? "No weak factors found — every component is above half of its maximum." : "Слабых факторов не выявлено — все составляющие выше половины своего максимума."}</p>
+        ) : account?.hasActivePackage ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {weakKoots.map(({ key }) => (
+              <div key={key} style={{ paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>
+                <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 2 }}>{kootLabel(key, lang)}</div>
+                <p style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.55 }}>{(isEn ? KOOT_WATCH_MEANING_EN : KOOT_WATCH_MEANING)[key]}</p>
+              </div>
+            ))}
+          </div>
         ) : (
           <PaywallTeaser
             title={isEn ? `Weak factors found: ${weakKoots.length}` : `Найдено слабых факторов: ${weakKoots.length}`}
             text={isEn
-              ? "What exactly each weak factor means and what to watch for in the pair — this breakdown is still in development, it will appear separately."
-              : "Что именно означает каждый слабый фактор и на что обратить внимание в паре — эта расшифровка ещё в разработке, появится отдельно."}
+              ? "What exactly each weak factor means and what to watch for in the pair — available with an active request package."
+              : "Что именно означает каждый слабый фактор и на что обратить внимание в паре — доступно с активным пакетом запросов."}
             goalName="paywall_koots_hit"
+            account={account}
+            onGoToPricing={onGoToPricing}
+            packageInfo={packageInfo}
+            buying={buying}
           />
         )}
       </div>
@@ -2658,7 +2701,7 @@ function JyotishAppInner() {
         </div>
       )}
 
-      {tab === "houses" && <HousesPanel details={chart1.details} />}
+      {tab === "houses" && <HousesPanel details={chart1.details} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
 
       {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
 
