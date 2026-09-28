@@ -1,5 +1,5 @@
 import { pool, dbEnabled } from "./db.js";
-import { PACKAGE_TIERS_USD, findTierUsd } from "./usage.js";
+import { PACKAGE_TIERS_USD, findTierUsd, PACKAGE_TIERS, findTier } from "./usage.js";
 
 // Lava.top (LAVALANE LTD, Кипр) — второй платёжный провайдер, для валютных (не-RU) платежей.
 // В отличие от ЮKassa, счёт создаётся не "с нуля", а привязан к заранее созданному в личном
@@ -19,7 +19,18 @@ function lavaHeaders() {
   return { "X-Api-Key": API_KEY, "Content-Type": "application/json" };
 }
 
-export async function lavaPackageInfo(_req, res) {
+export async function lavaPackageInfo(req, res) {
+  // currency=RUB — те же тарифы, что раньше были только у ЮKassa, но через Lava.top: оффер
+  // в личном кабинете настроен с динамической ценой сразу в нескольких валютах (см. обсуждение
+  // "сделать лава топ и для RU зоне, оставляем её там тоже).
+  const currency = (req.query?.currency || "USD").toUpperCase();
+  if (currency === "RUB") {
+    res.json({
+      tiers: PACKAGE_TIERS.map((t) => ({ id: t.id, quota: t.quota, amountMinor: t.priceKopeks })),
+      currency: "RUB",
+    });
+    return;
+  }
   res.json({ tiers: PACKAGE_TIERS_USD, currency: "USD" });
 }
 
@@ -27,13 +38,19 @@ export async function createLavaPayment(req, res) {
   if (!dbEnabled()) return res.status(503).json({ error: "accounts_disabled" });
   if (!req.user) return res.status(401).json({ error: "not_logged_in" });
 
-  const tier = findTierUsd(req.body?.tierId);
+  const currency = (req.body?.currency || "USD").toUpperCase();
+  const tier = currency === "RUB"
+    ? (() => {
+        const t = findTier(req.body?.tierId);
+        return t ? { id: t.id, quota: t.quota, amountMinor: t.priceKopeks } : null;
+      })()
+    : findTierUsd(req.body?.tierId);
   if (!tier) return res.status(400).json({ error: "invalid_tier", message: "Unknown package." });
 
   const pkgRes = await pool.query(
     `INSERT INTO packages (user_id, quota, provider, currency, amount_minor, status)
-     VALUES ($1,$2,'lava','USD',$3,'pending') RETURNING id`,
-    [req.user.id, tier.quota, tier.amountMinor]
+     VALUES ($1,$2,'lava',$3,$4,'pending') RETURNING id`,
+    [req.user.id, tier.quota, currency, tier.amountMinor]
   );
   const packageId = pkgRes.rows[0].id;
 
@@ -48,12 +65,12 @@ export async function createLavaPayment(req, res) {
     return res.json({ ok: true, testMode: true, packageId, confirmationUrl: null });
   }
 
-  const amountUsd = (tier.amountMinor / 100).toFixed(2);
+  const amountStr = (tier.amountMinor / 100).toFixed(2);
   const payload = {
     email: req.user.email,
     offerId: OFFER_ID,
-    currency: "USD",
-    amount: amountUsd,
+    currency,
+    amount: amountStr,
     successful_return_url: RETURN_URL_OK,
     failure_return_url: RETURN_URL_FAIL,
     cancel_return_url: RETURN_URL_FAIL,

@@ -2437,9 +2437,10 @@ function JyotishAppInner() {
   // Аккаунт (вход по email-коду) + пакет запросов — реальная, серверная часть пейволла.
   // Без аккаунта всё работает как раньше (анонимный мягкий пейволл на localStorage).
   const [account, setAccount] = useState({ loggedIn: false });
-  // Два набора тарифов — рублёвый (ЮKassa) и валютный (Lava.top). Показываем/используем нужный
-  // по текущему языку интерфейса — пока это единственный сигнал зоны, который у нас есть
-  // (геолокацию ещё не подключали, см. обсуждение "Комбинировать" в предыдущих сессиях).
+  // Оба тарифа (рублёвый и валютный) сейчас идут через Lava.top — она работает и в RU-зоне,
+  // так что пока не держим отдельно ЮKassa для рублей (её код в payments.js/backend не трогали,
+  // можно будет вернуть). Показываем/используем нужную валюту по текущему языку интерфейса —
+  // пока это единственный сигнал зоны, который у нас есть.
   const [packageInfoRub, setPackageInfoRub] = useState(null);
   const [packageInfoUsd, setPackageInfoUsd] = useState(null);
   const packageInfo = lang === "en" ? packageInfoUsd : packageInfoRub;
@@ -2451,17 +2452,17 @@ function JyotishAppInner() {
   }, []);
   useEffect(() => { refreshAccount(); }, [refreshAccount]);
   useEffect(() => {
-    fetchPackageInfo().then(setPackageInfoRub);
-    fetchLavaPackageInfo().then(setPackageInfoUsd);
+    fetchLavaPackageInfo("RUB").then(setPackageInfoRub);
+    fetchLavaPackageInfo("USD").then(setPackageInfoUsd);
   }, []);
 
   const buyPackage = useCallback(async (tierId) => {
     setBuying(true);
     try {
-      const pay = lang === "en" ? createLavaPackagePayment : createPackagePayment;
-      const r = await pay(tierId);
+      const currency = lang === "en" ? "USD" : "RUB";
+      const r = await createLavaPackagePayment(tierId, currency);
       if (r.confirmationUrl) {
-        window.location.href = r.confirmationUrl; // редирект на страницу оплаты (ЮKassa/Lava.top)
+        window.location.href = r.confirmationUrl; // редирект на страницу оплаты Lava.top
         return;
       }
       // Тестовый режим (ключи провайдера ещё не подключены на бэкенде) — пакет уже "оплачен", просто обновляем статус.

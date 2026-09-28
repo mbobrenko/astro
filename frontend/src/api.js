@@ -150,13 +150,15 @@ export async function fetchPackageInfo() {
   return { tiers: r.tiers || [], currency: "RUB" };
 }
 
-// Lava.top — валютные тарифы для не-RU/EN аудитории (см. backend/lava.js)
-export function createLavaPackagePayment(tierId) {
-  return post("/api/pay/lava/create", { tierId });
+// Lava.top — второй провайдер (не только для не-RU/EN: сейчас работает и для RU, см.
+// backend/lava.js). currency передаём явно, т.к. один и тот же оффер в личном кабинете
+// Lava.top настроен сразу на несколько валют.
+export function createLavaPackagePayment(tierId, currency = "USD") {
+  return post("/api/pay/lava/create", { tierId, currency });
 }
 
-export async function fetchLavaPackageInfo() {
-  const r = await getQuiet("/api/pay/lava/info");
+export async function fetchLavaPackageInfo(currency = "USD") {
+  const r = await getQuiet(`/api/pay/lava/info?currency=${encodeURIComponent(currency)}`);
   if (!r.ok) return null;
-  return { tiers: r.tiers || [], currency: r.currency || "USD" };
+  return { tiers: r.tiers || [], currency: r.currency || currency };
 }
