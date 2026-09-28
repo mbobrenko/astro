@@ -6,7 +6,27 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #0d0b26;
+  background-color: #0d0b26;
+  /* Звёздное небо: слой мелких точек-звёзд (повторяющаяся плитка) + три едва заметных
+     созвездия из линий и точек в цветах интерфейса (золото/фиолетовый/бирюза). Чистый CSS,
+     без картинок и JS — не мешает читаемости карточек, они всё равно непрозрачные. */
+  background-image:
+    radial-gradient(1.6px 1.6px at 10% 15%, rgba(241, 237, 228, 0.85), transparent 60%),
+    radial-gradient(1.2px 1.2px at 22% 68%, rgba(241, 237, 228, 0.65), transparent 60%),
+    radial-gradient(1.4px 1.4px at 35% 30%, rgba(241, 237, 228, 0.75), transparent 60%),
+    radial-gradient(1px 1px at 48% 82%, rgba(241, 237, 228, 0.55), transparent 60%),
+    radial-gradient(1.8px 1.8px at 60% 12%, rgba(241, 237, 228, 0.9), transparent 60%),
+    radial-gradient(1.2px 1.2px at 72% 55%, rgba(241, 237, 228, 0.6), transparent 60%),
+    radial-gradient(1.4px 1.4px at 85% 25%, rgba(241, 237, 228, 0.7), transparent 60%),
+    radial-gradient(1px 1px at 92% 75%, rgba(241, 237, 228, 0.5), transparent 60%),
+    radial-gradient(1.6px 1.6px at 15% 92%, rgba(241, 237, 228, 0.7), transparent 60%),
+    radial-gradient(1.2px 1.2px at 78% 90%, rgba(241, 237, 228, 0.55), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='200' viewBox='0 0 280 200'%3E%3Cline x1='20' y1='180' x2='68' y2='118' stroke='%23e8c46b' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='68' y1='118' x2='128' y2='140' stroke='%23e8c46b' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='128' y1='140' x2='176' y2='68' stroke='%23e8c46b' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='176' y1='68' x2='238' y2='88' stroke='%23e8c46b' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='238' y1='88' x2='258' y2='28' stroke='%23e8c46b' stroke-width='1' stroke-opacity='0.55'/%3E%3Ccircle cx='20' cy='180' r='2.6' fill='%23e8c46b' fill-opacity='0.85'/%3E%3Ccircle cx='68' cy='118' r='1.8' fill='%23e8c46b' fill-opacity='0.85'/%3E%3Ccircle cx='128' cy='140' r='1.8' fill='%23e8c46b' fill-opacity='0.85'/%3E%3Ccircle cx='176' cy='68' r='1.8' fill='%23e8c46b' fill-opacity='0.85'/%3E%3Ccircle cx='238' cy='88' r='1.8' fill='%23e8c46b' fill-opacity='0.85'/%3E%3Ccircle cx='258' cy='28' r='2.6' fill='%23e8c46b' fill-opacity='0.85'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='170' viewBox='0 0 250 170'%3E%3Cline x1='28' y1='22' x2='86' y2='58' stroke='%239089c9' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='86' y1='58' x2='76' y2='128' stroke='%239089c9' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='76' y1='128' x2='146' y2='148' stroke='%239089c9' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='146' y1='148' x2='186' y2='98' stroke='%239089c9' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='186' y1='98' x2='226' y2='40' stroke='%239089c9' stroke-width='1' stroke-opacity='0.55'/%3E%3Ccircle cx='28' cy='22' r='2.6' fill='%239089c9' fill-opacity='0.85'/%3E%3Ccircle cx='86' cy='58' r='1.8' fill='%239089c9' fill-opacity='0.85'/%3E%3Ccircle cx='76' cy='128' r='1.8' fill='%239089c9' fill-opacity='0.85'/%3E%3Ccircle cx='146' cy='148' r='1.8' fill='%239089c9' fill-opacity='0.85'/%3E%3Ccircle cx='186' cy='98' r='1.8' fill='%239089c9' fill-opacity='0.85'/%3E%3Ccircle cx='226' cy='40' r='2.6' fill='%239089c9' fill-opacity='0.85'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170' viewBox='0 0 170 170'%3E%3Cline x1='16' y1='40' x2='58' y2='90' stroke='%237bb8b0' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='58' y1='90' x2='120' y2='66' stroke='%237bb8b0' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='120' y1='66' x2='150' y2='120' stroke='%237bb8b0' stroke-width='1' stroke-opacity='0.55'/%3E%3Cline x1='150' y1='120' x2='110' y2='150' stroke='%237bb8b0' stroke-width='1' stroke-opacity='0.55'/%3E%3Ccircle cx='16' cy='40' r='2.6' fill='%237bb8b0' fill-opacity='0.85'/%3E%3Ccircle cx='58' cy='90' r='1.8' fill='%237bb8b0' fill-opacity='0.85'/%3E%3Ccircle cx='120' cy='66' r='1.8' fill='%237bb8b0' fill-opacity='0.85'/%3E%3Ccircle cx='150' cy='120' r='1.8' fill='%237bb8b0' fill-opacity='0.85'/%3E%3Ccircle cx='110' cy='150' r='2.6' fill='%237bb8b0' fill-opacity='0.85'/%3E%3C/svg%3E");
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 280px 200px, 250px 170px, 170px 170px;
+  background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 6% 4%, 82% 60%, 14% 82%;
 }
 
 #root {

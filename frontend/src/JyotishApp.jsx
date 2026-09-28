@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { LangProvider, useLang } from "./i18n.jsx";
+import { OFERTA_SECTIONS } from "./ofertaText.js";
 import {
   fetchPlanets,
   fetchMajorDasha,
@@ -439,7 +440,7 @@ function PricingInfo({ tiers, currency }) {
     : null;
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 14, lineHeight: 1.65 }}>
         {t("pricing_intro")}
       </div>
       <div style={{
@@ -489,7 +490,7 @@ function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageI
       background: "linear-gradient(135deg, #241c52, #1c1846)", border: "1px dashed #4a4088",
     }}>
       <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 4 }}>🔒 {title}</div>
-      <div style={{ fontSize: 11.5, color: "#c9c4e8", lineHeight: 1.5, marginBottom: 6 }}>{text}</div>
+      <div style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.55, marginBottom: 6 }}>{text}</div>
       {canBuy ? (
         <button onClick={onGoToPricing} style={{
           background: "#e8c46b", color: "#151233", border: "none", borderRadius: 16, padding: "7px 14px",
@@ -506,8 +507,57 @@ function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageI
   );
 }
 
+function OfertaModal({ onClose }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(8, 6, 24, 0.82)", zIndex: 1000,
+        display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 14px",
+        overflowY: "auto",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#1c1846", border: "1px solid #332c66", borderRadius: 12, padding: "24px 22px",
+          maxWidth: 720, width: "100%", color: "#f1ede4", fontFamily: "Georgia, 'Times New Roman', serif",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+          <div style={{ fontSize: 18, color: "#e8c46b", fontWeight: 700 }}>
+            {isEn ? "Public offer (terms of use)" : "Публичная оферта"}
+          </div>
+          <button onClick={onClose} style={{
+            background: "none", border: "1px solid #332c66", color: "#c9c4e8", borderRadius: 14,
+            width: 30, height: 30, fontSize: 15, cursor: "pointer", flexShrink: 0,
+          }}>×</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: "#9089c9", marginBottom: 18, lineHeight: 1.55 }}>
+          {isEn
+            ? "Below is the Russian-language public offer that governs paid services on this site (the provider is a self-employed individual under Russian law). An English summary will be added separately."
+            : "Сервис «Ведическая астрология» (astro-gold-three.vercel.app). Документ регулирует оказание платных услуг Сервиса и является публичной офертой в соответствии со ст. 437 ГК РФ."}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {OFERTA_SECTIONS.map((sec) => (
+            <div key={sec.title}>
+              <div style={{ fontSize: 14, color: "#e8c46b", fontWeight: 600, marginBottom: 6 }}>{sec.title}</div>
+              {sec.body.split("\n\n").map((para, i) => (
+                <p key={i} style={{ fontSize: 13.5, color: "#e3dfef", lineHeight: 1.65, marginBottom: 8, whiteSpace: "pre-line" }}>{para}</p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Вход по коду на email + статус пакета + кнопка покупки. Живёт на вкладке «Тарифы». */
-function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying }) {
+function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying, onShowOferta }) {
   const { t, lang } = useLang();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -576,8 +626,14 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: "#6f6798", marginTop: 6 }}>{t("account_restock_hint")}</div>
+        <div style={{ fontSize: 12.5, color: "#6f6798", marginTop: 6 }}>{t("account_restock_hint")}</div>
         {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
+        <button onClick={onShowOferta} style={{
+              background: "none", border: "none", color: "#8b84b8", fontSize: 11.5,
+              textDecoration: "underline", cursor: "pointer", padding: 0,
+            }}>
+          {lang === "en" ? "Public offer" : "Публичная оферта"}
+        </button>
       </div>
     );
   }
@@ -608,6 +664,12 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
         </form>
       )}
       {msg && <div style={{ fontSize: 12, color: msg.type === "err" ? "#e08b8b" : "#8fd19e", marginTop: 8 }}>{msg.text}</div>}
+      <button onClick={onShowOferta} style={{
+              background: "none", border: "none", color: "#8b84b8", fontSize: 11.5,
+              textDecoration: "underline", cursor: "pointer", padding: 0,
+            }}>
+        {lang === "en" ? "Public offer" : "Публичная оферта"}
+      </button>
     </div>
   );
 }
@@ -1243,7 +1305,7 @@ function HousesPanel({ details }) {
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 14, lineHeight: 1.65 }}>
         {lang === "en"
           ? `Houses are counted from the Ascendant (${signName(ascSignIdx, lang)}). For each area: pluses, points to watch, and what can practically be improved.`
           : `Дома считаются от Асцендента (${signName(ascSignIdx, lang)}). По каждой сфере — плюсы, на что обратить внимание и что практически можно поправить.`}
@@ -1459,7 +1521,7 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
   }
 
   const intro = (
-    <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+    <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 14, lineHeight: 1.65 }}>
       {isEn
         ? "In a female chart, Jupiter is traditionally read as the karaka (chief significator) of the husband — which is why the themes of \"children\" (5th house) and \"partner\" overlap here: the same planet governs both. This is a symbolic, traditional reading, not a medical forecast or a guarantee of a specific number of children or a specific partner — it shows the chart's tendencies, not facts about the future."
         : "В женской карте Юпитер традиционно читается как карака (главный сигнификатор) мужа — поэтому темы «дети» (5 дом) и «партнёр» здесь и пересекаются: одна и та же планета отвечает за обе. Это символическая традиционная трактовка, не медицинский прогноз и не гарантия конкретного числа детей или конкретного партнёра — она показывает тенденции карты, а не факты будущего."}
@@ -1557,7 +1619,7 @@ function FamilyPanel({ person, details, periods, account, onGoToPricing, package
 
       <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>{isEn ? "Best periods" : "Лучшие периоды"}</div>
-        <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 10, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: "#6f6798", marginBottom: 10, lineHeight: 1.55 }}>
           {isEn
             ? "For each mahadasha period — how friendly its ruling planet is toward the themes of the 5th and 7th houses and Jupiter. Not about the antardashas within — a general estimate over the big periods of life."
             : "По каждому периоду махадаши — насколько его планета-управитель дружественна темам 5 и 7 домов и Юпитеру. Не про антардаши внутри — общая прикидка по большим периодам жизни."}
@@ -1633,7 +1695,7 @@ function MatchResult({ data, account, onGoToPricing, packageInfo, buying }) {
         <div style={{ fontSize: 15, color: "#f1ede4", fontWeight: 700 }}>{isEn ? "Total:" : "Итого:"} {total.received_points} / {total.total_points}</div>
         <div style={{ fontSize: 13, color: conclusion.status ? "#8fd19e" : "#e0b98b", marginTop: 6, lineHeight: 1.55 }}>{verdictText}</div>
         {conclusion.report && (
-          <div style={{ fontSize: 11, color: "#6f6798", marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>
+          <div style={{ fontSize: 12.5, color: "#6f6798", marginTop: 8, lineHeight: 1.55, fontStyle: "italic" }}>
             {isEn ? "Comment (from AstrologyAPI, in English):" : "Комментарий (оригинал на английском):"} «{conclusion.report}»
           </div>
         )}
@@ -1741,7 +1803,7 @@ function HeuristicMatch({ kind, items }) {
           ? (kind === "business" ? "Compatibility for a business partnership" : "Compatibility for friendship")
           : (kind === "business" ? "Совместимость для делового партнёрства" : "Совместимость для дружбы")}
       </div>
-      <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 12, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12.5, color: "#6f6798", marginBottom: 12, lineHeight: 1.55 }}>
         {lang === "en"
           ? "This isn't classical Ashtakoota (which is designed for marriage only) — a practical heuristic over real chart data: the Moon, the Ascendant, and the rulers of the relevant houses."
           : "Это не классическая Аштакута (она рассчитана только на брак) — практическая эвристика поверх реальных данных карты: Луна, Асцендент и управители профильных домов."}
@@ -1900,7 +1962,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 12, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 12, lineHeight: 1.65 }}>
         {isEn
           ? "Relocation recalculates the Ascendant and the houses for the same moment of birth, but at a different point on Earth (planets barely shift by sign, but the houses shift noticeably). Below is a search for favorable places across an extended list of locations on every inhabited continent, or a manual check of a specific city."
           : "Релокация пересчитывает Асцендент и дома для той же секунды рождения, но в другой точке Земли (планеты по знакам почти не меняются, а вот дома — заметно). Ниже — подбор благоприятных мест по расширенному списку локаций со всех обитаемых континентов, либо проверка конкретного города вручную."}
@@ -1911,7 +1973,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
       {orig && (
         <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 6, fontWeight: 600 }}>{isEn ? "Best relocation options" : "Наилучшие варианты релокации"}</div>
-          <div style={{ fontSize: 11, color: "#6f6798", marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.5, color: "#6f6798", marginBottom: 12, lineHeight: 1.55 }}>
             {isEn
               ? `A rough scan across ${CANDIDATE_CITIES.length} points around the world — not just popular capitals, but also less obvious places on every continent: where favorable planets land in strong houses (1,4,5,7,9,10) and difficult ones in calm houses (6,8,12), how this affects the house of the current mahadasha, and separately, how strong the Ascendant's own lord is at that point. The list is large but finite (recalculating literally every point on the planet in a reasonable time isn't realistic) — a heuristic over the chart, not a classical place-selection method. You can narrow the search to a specific region, or manually check any city or coordinates below.`
               : `Прикидка по ${CANDIDATE_CITIES.length} точкам по всему миру — не только популярные столицы, но и менее очевидные места на каждом континенте: где благоприятные планеты попадают в сильные дома (1,4,5,7,9,10), а трудные — в спокойные (6,8,12), как это влияет на дом текущей махадаши, и отдельно — насколько силён управитель Асцендента (Лагна-лорд) в этой точке. Список большой, но конечный (пересчитать буквально каждую точку планеты за разумное время нереально) — эвристика поверх карты, не классическая методика подбора места. Можно сузить поиск до конкретной части света, либо проверить вручную любой город или координаты ниже.`}
@@ -2028,7 +2090,7 @@ function RelocationPanel({ person, originalChart, activeMahaLord, account, onGoT
             );
           })()}
 
-          <div style={{ fontSize: 11, color: "#6f6798", marginTop: 10, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.5, color: "#6f6798", marginTop: 10, lineHeight: 1.55 }}>
             {isEn
               ? "Below is the same logic as in the overall city ranking above (favorable planets in strong houses, difficult ones in calm houses). The overall ranking score also factors in two big standalone things not tied to any single area: which house the current mahadasha's lord ends up in, and how strong the Ascendant's own lord is. So a high-ranking place's individual areas below may well look modest or barely change — that isn't a mistake."
               : "Ниже — та же логика, что и в общем рейтинге городов выше (благоприятные планеты в сильных домах, трудные — в слабых). Общий балл в рейтинге учитывает ещё и два больших отдельных фактора, не привязанных ни к одной конкретной сфере: в каком доме окажется управитель текущей махадаши, и насколько силён управитель самого Асцендента. Поэтому у высокого места в рейтинге отдельные сферы ниже вполне могут выглядеть скромно или почти не меняться — это не ошибка."}
@@ -2285,7 +2347,7 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 14, lineHeight: 1.65 }}>
         {isEn
           ? "A tool for narrowing down an unknown birth time from known life events. For each candidate time in the chosen range, it checks whether the planet ruling the dasha/antardasha on the event's date matches the house that event usually belongs to (rulership or presence in the house). This is a method to guide professional analysis, not a ready-made answer — the final choice of time is yours."
           : "Инструмент для уточнения неизвестного времени рождения по известным жизненным событиям. Для каждого времени-кандидата в выбранном диапазоне считается, совпадает ли планета, управляющая дашой/антардашой на дату события, с домом, за который это событие обычно отвечает (владение или присутствие в доме). Это метод-подсказка для профессионального анализа, а не готовый ответ — финальный выбор времени остаётся за вами."}
@@ -2343,7 +2405,7 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
         }}>{isEn ? "+ add an event" : "+ добавить событие"}</button>
       </div>
 
-      <div style={{ marginBottom: 10, fontSize: 11, color: "#6f6798" }}>
+      <div style={{ marginBottom: 10, fontSize: 12.5, color: "#6f6798" }}>
         {isEn
           ? <>Candidate times in range: {times.length || 0}. One calculation costs 1 request from the package (internally — up to {estimatedCalls} calls to AstrologyAPI; repeating with the same data is free).</>
           : <>Кандидатов времени в диапазоне: {times.length || 0}. Один расчёт спишет 1 запрос из пакета (внутри — до {estimatedCalls} обращений к AstrologyAPI, повтор с теми же данными — бесплатно).</>}
@@ -2374,7 +2436,7 @@ function RectificationPanel({ person, account, onGoToPricing, packageInfo, buyin
       {result.candidates && (
         <div style={{ background: "#1c1846", border: "1px solid #332c66", borderRadius: 10, padding: 16 }}>
           <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600, marginBottom: 10 }}>{isEn ? "Result by candidate" : "Результат по кандидатам"}</div>
-          <div style={{ fontSize: 10.5, color: "#766fa0", marginBottom: 10, lineHeight: 1.8, display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "#766fa0", marginBottom: 10, lineHeight: 1.8, display: "flex", gap: 14, flexWrap: "wrap" }}>
             <span><span style={{ color: "#7fd99a" }}>●</span> {isEn ? "antardasha rules/sits in the right house (weight 3)" : "антардаша владеет/стоит в нужном доме (вес 3)"}</span>
             <span><span style={{ color: "#e8c46b" }}>●</span> {isEn ? "match only at the mahadasha level (weight 1)" : "совпадение только на уровне махадаши (вес 1)"}</span>
             <span><span style={{ color: "#4a4570" }}>●</span> {isEn ? "no match · the letter in the circle is the event type's first letter" : "совпадения нет · буква в кружке — первая буква типа события"}</span>
@@ -2445,6 +2507,7 @@ function JyotishAppInner() {
   const [packageInfoUsd, setPackageInfoUsd] = useState(null);
   const packageInfo = lang === "en" ? packageInfoUsd : packageInfoRub;
   const [buying, setBuying] = useState(false);
+  const [ofertaOpen, setOfertaOpen] = useState(false);
 
   const refreshAccount = useCallback(async () => {
     const s = await fetchAccountStatus();
@@ -2664,9 +2727,11 @@ function JyotishAppInner() {
       {tab === "pricing" && (
         <>
           <PricingInfo tiers={packageInfo?.tiers} currency={packageInfo?.currency} />
-          <AccountWidget account={account} packageInfo={packageInfo} onLoggedIn={refreshAccount} onBuyPackage={buyPackage} buying={buying} />
+          <AccountWidget account={account} packageInfo={packageInfo} onLoggedIn={refreshAccount} onBuyPackage={buyPackage} buying={buying} onShowOferta={() => setOfertaOpen(true)} />
         </>
       )}
+
+      {ofertaOpen && <OfertaModal onClose={() => setOfertaOpen(false)} />}
     </div>
   );
 }
