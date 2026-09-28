@@ -79,15 +79,10 @@ export async function createLavaPayment(req, res) {
     });
   }
 
-  // ВАЖНО (временно): точную схему ответа Lava.top (в каком поле id счёта, в каком — ссылка на
-  // оплату) не удалось подтвердить по документации — Swagger на gate.lava.top/docs рендерится
-  // через JS и не отдаёт содержимое текстовому фетчеру, а живой тестовый вызов сделать не вышло:
-  // сеть до gate.lava.top не доступна ни из облачной песочницы, ни с этого компьютера через
-  // текущие настройки исходящего трафика. Поэтому пока: сохраняем сырой ответ целиком в БД и
-  // перебираем несколько вероятных названий полей. После первого реального вызова — посмотреть
-  // lava_raw_response в БД (или лог сервера) и заменить перебор на точные имена полей.
-  const invoiceId = data.id || data.invoiceId || data.invoice_id || data.paymentId || null;
-  const payUrl = data.paymentUrl || data.payment_url || data.url || data.link || null;
+  // Схема ответа подтверждена по живой Swagger-документации (gate.lava.top/docs, схема
+  // InvoiceResponseV3): { id, status, amountTotal: { currency, amount }, paymentUrl }.
+  const invoiceId = data.id || null;
+  const payUrl = data.paymentUrl || null;
 
   await pool.query(`UPDATE packages SET lava_payment_id=$2, lava_raw_response=$3 WHERE id=$1`, [
     packageId,
@@ -119,12 +114,15 @@ export async function lavaWebhook(req, res) {
     }
 
     const body = req.body || {};
-    console.log("Lava.top webhook, сырое тело (для первичной сверки полей):", JSON.stringify(body));
+    console.log("Lava.top webhook:", body.eventType, body.contractId, body.status);
 
-    const invoiceId =
-      body.id || body.invoiceId || body.invoice_id || body.paymentId || body?.data?.id || null;
+    // Схема тела вебхука подтверждена по документации (PurchaseWebhookLog): идентификатор счёта
+    // лежит в contractId (не id!), а его status там же в нижнем регистре ("completed" и т.п. —
+    // это отдельный enum ContractStatusDto, отличный от InvoiceStatus у GET /invoices/{id}).
+    // Тело вебхука само по себе не используем как источник истины — перепроверяем у Lava.top.
+    const invoiceId = body.contractId || null;
     if (!invoiceId) {
-      console.warn("Lava.top webhook: не нашла id счёта в теле уведомления, пропускаю.");
+      console.warn("Lava.top webhook: не нашла contractId в теле уведомления, пропускаю.");
       return;
     }
 
@@ -137,8 +135,8 @@ export async function lavaWebhook(req, res) {
       return;
     }
 
-    const statusStr = String(data.status || data.invoiceStatus || "").toLowerCase();
-    const isPaid = ["paid", "success", "succeeded", "completed"].includes(statusStr);
+    // InvoiceStatus (GET /api/v1/invoices/{id}): NEW | IN_PROGRESS | COMPLETED | FAILED.
+    const isPaid = data.status === "COMPLETED";
     if (!isPaid) return;
 
     await pool.query(
