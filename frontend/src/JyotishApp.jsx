@@ -1206,7 +1206,7 @@ function assessDomain(dmKey, rows, lang) {
   const context = dm.houses.map((h) => {
     const row = rows[h - 1];
     return isEn
-      ? `House ${h} (${houseMeaning(h, lang)}) — sign ${signName(row.signIdx, lang)}, element ${elementOf(row.signIdx)}: in behavior this reads as ${signTraits(row.signIdx, lang)}.`
+      ? `House ${h} (${houseMeaning(h, lang)}) — sign ${signName(row.signIdx, lang)}, element ${elementOf(row.signIdx).charAt(0).toUpperCase()}${elementOf(row.signIdx).slice(1)}: in behavior this reads as ${signTraits(row.signIdx, lang)}.`
       : `${h} дом (${houseMeaning(h, lang)}) — знак ${signName(row.signIdx, lang)}, стихия ${elementRu(elementOf(row.signIdx))}: в поведении это ${signTraits(row.signIdx, lang)}.`;
   });
 
