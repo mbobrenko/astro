@@ -54,6 +54,17 @@ CREATE TABLE IF NOT EXISTS packages (
 CREATE INDEX IF NOT EXISTS idx_packages_user ON packages(user_id);
 CREATE INDEX IF NOT EXISTS idx_packages_yk ON packages(yookassa_payment_id);
 
+-- Добавка для второго провайдера (Lava.top, валютные тарифы) — не трогает существующие строки ЮKassa,
+-- у них provider/currency просто примут значения по умолчанию.
+ALTER TABLE packages ALTER COLUMN price_kopeks DROP NOT NULL;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'yookassa';
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'RUB';
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS amount_minor INTEGER;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS lava_payment_id TEXT;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS lava_raw_response JSONB;
+CREATE INDEX IF NOT EXISTS idx_packages_provider ON packages(provider);
+CREATE INDEX IF NOT EXISTS idx_packages_lava ON packages(lava_payment_id);
+
 CREATE TABLE IF NOT EXISTS usage_log (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

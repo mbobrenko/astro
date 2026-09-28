@@ -6,6 +6,7 @@ import { migrate } from "./db.js";
 import { requestCode, verifyCode, logout, attachUser } from "./auth.js";
 import { checkUsageHandler, accountStatusHandler } from "./usage.js";
 import { createPayment, webhook, paymentStatus, packageInfo } from "./payments.js";
+import { createLavaPayment, lavaWebhook, lavaPackageInfo } from "./lava.js";
 
 dotenv.config();
 
@@ -92,11 +93,16 @@ app.get("/api/account/status", accountStatusHandler);
 // --- Лимит платного пакета: фронтенд спрашивает разрешение перед "новым" (не кэшированным) запросом ---
 app.post("/api/usage/check", checkUsageHandler);
 
-// --- Оплата пакета через ЮKassa ---
+// --- Оплата пакета через ЮKassa (RU, рубли) ---
 app.get("/api/pay/info", packageInfo);
 app.post("/api/pay/create", createPayment);
 app.post("/api/pay/webhook", webhook);
 app.get("/api/pay/status/:id", paymentStatus);
+
+// --- Оплата пакета через Lava.top (не-RU, доллары) — статус проверяется тем же /api/pay/status/:id ---
+app.get("/api/pay/lava/info", lavaPackageInfo);
+app.post("/api/pay/lava/create", createLavaPayment);
+app.post("/api/pay/lava/webhook", lavaWebhook);
 
 // --- Геокодинг места рождения и исторический часовой пояс ---
 app.post("/api/geo", proxy(() => "geo_details"));

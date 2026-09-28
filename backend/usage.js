@@ -11,6 +11,18 @@ export function findTier(tierId) {
   return PACKAGE_TIERS.find((t) => t.id === tierId) || null;
 }
 
+// ЧЕРНОВЫЕ доллары для не-RU зоны (Lava.top) — конкретные суммы ещё не подтверждены,
+// сейчас это просто 690/990/1590₽ по курсу ~92 с округлением. Поправить перед реальным запуском.
+export const PACKAGE_TIERS_USD = [
+  { id: "p10", quota: 10, amountMinor: 900 },   // $9.00
+  { id: "p15", quota: 15, amountMinor: 1300 },  // $13.00
+  { id: "p20", quota: 20, amountMinor: 1900 },  // $19.00
+];
+
+export function findTierUsd(tierId) {
+  return PACKAGE_TIERS_USD.find((t) => t.id === tierId) || null;
+}
+
 export async function getActivePackage(userId) {
   if (!dbEnabled()) return null;
   const { rows } = await pool.query(
