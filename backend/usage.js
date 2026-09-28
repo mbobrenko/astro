@@ -2,21 +2,21 @@ import { pool, dbEnabled } from "./db.js";
 
 // Три размера пакета. Правится прямо здесь (не через env) — тарифная сетка, а не секрет.
 export const PACKAGE_TIERS = [
-  { id: "p10", quota: 10, priceKopeks: 69000 },  // 690 ₽
-  { id: "p15", quota: 15, priceKopeks: 99000 },  // 990 ₽
-  { id: "p20", quota: 20, priceKopeks: 159000 }, // 1590 ₽
+  { id: "p10", quota: 10, priceKopeks: 79900 },  // 799 ₽
+  { id: "p15", quota: 15, priceKopeks: 129900 }, // 1299 ₽
+  { id: "p20", quota: 20, priceKopeks: 199900 }, // 1999 ₽
 ];
 
 export function findTier(tierId) {
   return PACKAGE_TIERS.find((t) => t.id === tierId) || null;
 }
 
-// ЧЕРНОВЫЕ доллары для не-RU зоны (Lava.top) — конкретные суммы ещё не подтверждены,
-// сейчас это просто 690/990/1590₽ по курсу ~92 с округлением. Поправить перед реальным запуском.
+// Доллары для не-RU зоны (Lava.top) — пересчитаны по курсу ЦБ РФ ~84.3 ₽/$ на 799/1299/1999 ₽,
+// округлено до целых долларов.
 export const PACKAGE_TIERS_USD = [
   { id: "p10", quota: 10, amountMinor: 900 },   // $9.00
-  { id: "p15", quota: 15, amountMinor: 1300 },  // $13.00
-  { id: "p20", quota: 20, amountMinor: 1900 },  // $19.00
+  { id: "p15", quota: 15, amountMinor: 1500 },  // $15.00
+  { id: "p20", quota: 20, amountMinor: 2400 },  // $24.00
 ];
 
 export function findTierUsd(tierId) {
