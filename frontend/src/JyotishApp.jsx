@@ -1029,15 +1029,25 @@ function DashaTimeline({ birth, periods, details, account, onGoToPricing, packag
 
   return (
     <div>
-      <div style={{ display: "flex", height: 26, borderRadius: 4, overflow: "hidden", marginBottom: 14 }}>
+      <div style={{ display: "flex", height: 30, borderRadius: 4, overflow: "hidden", marginBottom: 14 }}>
         {periods.map((p, i) => {
           const active = p.start && p.end && now >= p.start && now < p.end;
+          const rel = lagnaLord ? relation(lagnaLord, p.lord) : null;
+          const relColor = rel ? (RELATION_COLOR[rel] || RELATION_COLOR.neutral) : "#151233";
+          const relLabel = rel ? ((lang === "en" ? RELATION_BADGE_SHORT_EN : RELATION_BADGE_SHORT)[rel] || "") : "";
+          const planetColor = PLANET_COLOR[p.lord] || "#9089c9";
           return (
-            <div key={i} title={planetName(p.lord, lang)} onClick={() => setOpenIdx(openIdx === i ? null : i)}
+            <div key={i} title={`${planetName(p.lord, lang)}${relLabel ? " — " + relLabel : ""}`} onClick={() => setOpenIdx(openIdx === i ? null : i)}
               style={{
-                flex: Math.max(p.fullYears, 0.2), background: active ? "#e8c46b" : "#332c66",
-                borderRight: "1px solid #151233", cursor: "pointer",
-              }} />
+                flex: Math.max(p.fullYears, 0.2), display: "flex", flexDirection: "column",
+                borderRight: "1px solid #151233", cursor: "pointer", boxSizing: "border-box",
+                outline: active ? "2px solid #e8c46b" : "none", outlineOffset: -2,
+              }}>
+              <div style={{ flex: 1, background: active ? planetColor : `${planetColor}b3`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 13, color: "#151233", opacity: 0.85 }}>{PLANET_ICON[p.lord] || ""}</span>
+              </div>
+              <div style={{ height: 4, background: relColor }} />
+            </div>
           );
         })}
       </div>
@@ -1285,8 +1295,27 @@ function HousesPanel({ details }) {
               <tr key={r.houseNum} style={{ borderTop: "1px solid #2e2a5c" }}>
                 <td style={{ padding: 6, color: "#f1ede4" }}>{r.houseNum}</td>
                 <td style={{ color: "#c9c4e8" }}>{signName(r.signIdx, lang)}</td>
-                <td style={{ color: "#c9c4e8" }}>{planetName(r.lord, lang)}</td>
-                <td style={{ color: "#c9c4e8" }}>{r.occupants.map((c) => planetName(c, lang)).join(", ") || "—"}</td>
+                <td style={{ padding: 6, color: PLANET_COLOR[r.lord] || "#c9c4e8", fontWeight: 600 }}>
+                  {PLANET_ICON[r.lord] ? <span style={{ fontSize: 12, marginRight: 3 }}>{PLANET_ICON[r.lord]}</span> : null}{planetName(r.lord, lang)}
+                </td>
+                <td style={{ color: "#c9c4e8", padding: 6 }}>
+                  {r.occupants.length ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {r.occupants.map((c) => {
+                        const color = PLANET_COLOR[c] || "#f1ede4";
+                        return (
+                          <span key={c} style={{
+                            fontSize: 11, fontWeight: 600, color, background: `${color}26`,
+                            border: `1px solid ${color}66`, padding: "1px 6px 1px 5px", borderRadius: 8,
+                            display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
+                          }}>
+                            <span style={{ fontSize: 12, lineHeight: 1 }}>{PLANET_ICON[c] || ""}</span>{planetName(c, lang)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : "—"}
+                </td>
               </tr>
             ))}
           </tbody>
