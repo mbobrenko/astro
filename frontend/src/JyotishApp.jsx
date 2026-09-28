@@ -15,6 +15,8 @@ import {
   checkUsage,
   createPackagePayment,
   fetchPackageInfo,
+  createLavaPackagePayment,
+  fetchLavaPackageInfo,
 } from "./api";
 import {
   SIGNS,
@@ -424,9 +426,17 @@ function ymGoal(name, params) {
 
 /* Честное сравнение бесплатного и полного доступа — без цены, её ещё нет. Отдельная вкладка,
    а не свёрнутый блок под табами — так её проще найти и не нужно объяснять каждый раз заново. */
-function PricingInfo() {
-  const { t } = useLang();
+function formatTierPrice(tier, lang) {
+  const amt = (tier.amountMinor ?? tier.priceKopeks) / 100;
+  return lang === "en" ? `$${amt}` : `${amt.toFixed(0)} ₽`;
+}
+
+function PricingInfo({ tiers, currency }) {
+  const { t, lang } = useLang();
   useEffect(() => { ymGoal("tab_pricing_viewed"); }, []);
+  const tierLine = tiers && tiers.length
+    ? tiers.map((ti) => `${ti.quota} ${t("account_requests_word")} — ${formatTierPrice(ti, lang)}`).join(" · ")
+    : null;
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <div style={{ fontSize: 12, color: "#9089c9", marginBottom: 14, lineHeight: 1.6 }}>
@@ -456,7 +466,7 @@ function PricingInfo() {
             <li>{t("pricing_paid_rectify")}</li>
           </ul>
           <div style={{ fontSize: 12, color: "#c9c4e8", marginTop: 10, lineHeight: 1.6 }}>
-            {t("pricing_tiers_line")}
+            {tierLine ? <>{tierLine}. {t("pricing_tiers_note")}</> : t("pricing_tiers_line")}
           </div>
         </div>
       </div>
@@ -498,7 +508,7 @@ function PaywallTeaser({ title, text, goalName, account, onGoToPricing, packageI
 
 /* Вход по коду на email + статус пакета + кнопка покупки. Живёт на вкладке «Тарифы». */
 function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [stage, setStage] = useState("email"); // email | code
@@ -562,7 +572,7 @@ function AccountWidget({ account, packageInfo, onLoggedIn, onBuyPackage, buying 
               background: "#e8c46b", color: "#151233", border: "none", borderRadius: 20,
               padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
             }}>
-              {tier.quota} {t("account_requests_word")} — {(tier.priceKopeks / 100).toFixed(0)} ₽
+              {tier.quota} {t("account_requests_word")} — {formatTierPrice(tier, lang)}
             </button>
           ))}
         </div>
@@ -825,16 +835,20 @@ function BirthForm({ person, setPerson, label }) {
 function PlanetTable({ details }) {
   const { lang } = useLang();
   if (!details) return null;
+  // Отношение к Асценденту (панчадха-майтри упрощённо, как в дашa-баре/домах) — по аналогии
+  // с колонкой "Relation"/"Friendship" в Shri Jyoti Star и похожих программах.
+  const lagnaLord = details?.As?.sign != null ? signLordOf(details.As.sign) : null;
   return (
     <div style={{ overflowX: "auto", marginTop: 16 }}>
-    <table style={{ width: "100%", minWidth: 420, borderCollapse: "collapse", fontSize: 12 }}>
+    <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 12 }}>
       <thead><tr style={{ color: "#9089c9", textAlign: "left" }}>
-        <th style={{ padding: 6 }}>{lang === "en" ? "Planet" : "Планета"}</th><th>{lang === "en" ? "Sign" : "Знак"}</th><th>{lang === "en" ? "Nakshatra" : "Накшатра"}</th><th>{lang === "en" ? "Pada" : "Пада"}</th><th>{lang === "en" ? "House" : "Дом"}</th>
+        <th style={{ padding: 6 }}>{lang === "en" ? "Planet" : "Планета"}</th><th>{lang === "en" ? "Sign" : "Знак"}</th><th>{lang === "en" ? "Nakshatra" : "Накшатра"}</th><th>{lang === "en" ? "Pada" : "Пада"}</th><th>{lang === "en" ? "House" : "Дом"}</th><th>{lang === "en" ? "Relation" : "Отношение"}</th>
       </tr></thead>
       <tbody>
         {[...PLANET_ORDER, "As"].map((k) => {
           const v = details[k];
           if (!v) return null;
+          const rel = k !== "As" && lagnaLord ? relation(lagnaLord, k) : null;
           return (
             <tr key={k} style={{ borderTop: "1px solid #2e2a5c" }}>
               <td style={{ padding: 6, color: PLANET_COLOR[k] || "#f1ede4", fontWeight: 600 }}>{PLANET_ICON[k] ? PLANET_ICON[k] + " " : ""}{planetName(k, lang)}{v.retro ? " ℞" : ""}</td>
@@ -842,6 +856,7 @@ function PlanetTable({ details }) {
               <td style={{ color: "#c9c4e8" }}>{nakshatraName(v.nak, lang)}</td>
               <td style={{ color: "#c9c4e8" }}>{v.pada}</td>
               <td style={{ color: "#c9c4e8" }}>{v.house ?? "—"}</td>
+              <td>{rel ? <RelationBadge rel={rel} /> : (k === "As" ? null : <span style={{ color: "#6b6591" }}>—</span>)}</td>
             </tr>
           );
         })}
@@ -2422,7 +2437,12 @@ function JyotishAppInner() {
   // Аккаунт (вход по email-коду) + пакет запросов — реальная, серверная часть пейволла.
   // Без аккаунта всё работает как раньше (анонимный мягкий пейволл на localStorage).
   const [account, setAccount] = useState({ loggedIn: false });
-  const [packageInfo, setPackageInfo] = useState(null);
+  // Два набора тарифов — рублёвый (ЮKassa) и валютный (Lava.top). Показываем/используем нужный
+  // по текущему языку интерфейса — пока это единственный сигнал зоны, который у нас есть
+  // (геолокацию ещё не подключали, см. обсуждение "Комбинировать" в предыдущих сессиях).
+  const [packageInfoRub, setPackageInfoRub] = useState(null);
+  const [packageInfoUsd, setPackageInfoUsd] = useState(null);
+  const packageInfo = lang === "en" ? packageInfoUsd : packageInfoRub;
   const [buying, setBuying] = useState(false);
 
   const refreshAccount = useCallback(async () => {
@@ -2430,24 +2450,28 @@ function JyotishAppInner() {
     setAccount(s);
   }, []);
   useEffect(() => { refreshAccount(); }, [refreshAccount]);
-  useEffect(() => { fetchPackageInfo().then(setPackageInfo); }, []);
+  useEffect(() => {
+    fetchPackageInfo().then(setPackageInfoRub);
+    fetchLavaPackageInfo().then(setPackageInfoUsd);
+  }, []);
 
   const buyPackage = useCallback(async (tierId) => {
     setBuying(true);
     try {
-      const r = await createPackagePayment(tierId);
+      const pay = lang === "en" ? createLavaPackagePayment : createPackagePayment;
+      const r = await pay(tierId);
       if (r.confirmationUrl) {
-        window.location.href = r.confirmationUrl; // редирект на страницу оплаты ЮKassa
+        window.location.href = r.confirmationUrl; // редирект на страницу оплаты (ЮKassa/Lava.top)
         return;
       }
-      // Тестовый режим (ключи ЮKassa ещё не подключены на бэкенде) — пакет уже "оплачен", просто обновляем статус.
+      // Тестовый режим (ключи провайдера ещё не подключены на бэкенде) — пакет уже "оплачен", просто обновляем статус.
       await refreshAccount();
     } catch (e) {
       alert(e.message || (lang === "en" ? "Couldn't start the payment. Please try again." : "Не удалось начать оплату. Попробуйте ещё раз."));
     } finally {
       setBuying(false);
     }
-  }, [refreshAccount]);
+  }, [refreshAccount, lang]);
   // Тизеры не покупают конкретный пакет напрямую (тарифов теперь несколько) — просто ведут на вкладку «Тарифы»,
   // где человек выбирает нужный размер пакета сам.
   const goToPricing = useCallback(() => setTab("pricing"), []);
@@ -2638,7 +2662,7 @@ function JyotishAppInner() {
 
       {tab === "pricing" && (
         <>
-          <PricingInfo />
+          <PricingInfo tiers={packageInfo?.tiers} currency={packageInfo?.currency} />
           <AccountWidget account={account} packageInfo={packageInfo} onLoggedIn={refreshAccount} onBuyPackage={buyPackage} buying={buying} />
         </>
       )}

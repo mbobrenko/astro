@@ -51,6 +51,7 @@ export const STRINGS = {
     pricing_free_title: "Бесплатно",
     pricing_paid_title: "Пакет запросов",
     pricing_tiers_line: "10 запросов — 690 ₽ · 15 запросов — 990 ₽ · 20 запросов — 1590 ₽. Когда лимит заканчивается, можно докупить любой из пакетов ещё раз — они складываются. Вход и покупка — ниже.",
+    pricing_tiers_note: "Когда лимит заканчивается, можно докупить любой из пакетов ещё раз — они складываются. Вход и покупка — ниже.",
 
     pricing_free_chart: "Полная карта, дома и сферы жизни",
     pricing_free_dasha: "Даша: махадаша и антардаша целиком",
@@ -127,6 +128,7 @@ export const STRINGS = {
     pricing_free_title: "Free",
     pricing_paid_title: "Request package",
     pricing_tiers_line: "10 requests — 690 ₽ · 15 requests — 990 ₽ · 20 requests — 1590 ₽. When a package runs out you can buy any package again — they stack. Sign in and purchase below.",
+    pricing_tiers_note: "When a package runs out you can buy any package again — they stack. Sign in and purchase below.",
 
     pricing_free_chart: "Full chart, houses and life areas",
     pricing_free_dasha: "Dasha: full mahadasha and antardasha",

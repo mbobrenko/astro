@@ -147,5 +147,16 @@ export function createPackagePayment(tierId) {
 export async function fetchPackageInfo() {
   const r = await getQuiet("/api/pay/info");
   if (!r.ok) return null;
-  return { tiers: r.tiers || [] };
+  return { tiers: r.tiers || [], currency: "RUB" };
+}
+
+// Lava.top — валютные тарифы для не-RU/EN аудитории (см. backend/lava.js)
+export function createLavaPackagePayment(tierId) {
+  return post("/api/pay/lava/create", { tierId });
+}
+
+export async function fetchLavaPackageInfo() {
+  const r = await getQuiet("/api/pay/lava/info");
+  if (!r.ok) return null;
+  return { tiers: r.tiers || [], currency: r.currency || "USD" };
 }
