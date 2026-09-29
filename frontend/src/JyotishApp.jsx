@@ -2804,7 +2804,7 @@ function JyotishAppInner() {
 
   return (
     <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4", position: "relative", overflow: "hidden" }}>
-      <div className={`const-${tab}`} style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }} />
+      <div className={`const-${tab}`} style={{ position: "absolute", inset: 0, zIndex: -1, pointerEvents: "none" }} />
       <div style={{ textAlign: "center", marginBottom: 18, position: "relative", zIndex: 1 }}>
         <button onClick={() => setLang(lang === "ru" ? "en" : "ru")} style={{
           position: "absolute", right: 0, top: 0, background: "#1c1846", color: "#c9c4e8",
