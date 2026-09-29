@@ -1433,6 +1433,164 @@ function HousesPanel({ details, account, onGoToPricing, packageInfo, buying }) {
   );
 }
 
+// =========================================================
+// UI: карьера и бизнес + предрасположенность (достоинство планет)
+// =========================================================
+
+// Классические таблицы достоинства планет (уччха/свакшетра/нича — экзальтация/собственный
+// знак/падение). Индексы знаков — как в SIGNS/EN_SIGNS (0 = Овен/Aries ... 11 = Рыбы/Pisces).
+// Используются только для ранжирования «сильнейших» планет карты, не заменяют полноценный
+// расчёт шадбалы/дигбалы.
+const PLANET_EXALT_SIGN = { Su: 0, Mo: 1, Ma: 9, Me: 5, Ju: 3, Ve: 11, Sa: 6 };
+const PLANET_OWN_SIGNS = { Su: [4], Mo: [3], Ma: [0, 7], Me: [2, 5], Ju: [8, 11], Ve: [1, 6], Sa: [9, 10] };
+const PLANET_DEBIL_SIGN = { Su: 6, Mo: 7, Ma: 3, Me: 11, Ju: 9, Ve: 5, Sa: 0 };
+const CAREER_PLANETS = ["Su", "Mo", "Ma", "Me", "Ju", "Ve", "Sa"];
+
+function planetDignity(code, signIdx) {
+  if (signIdx == null) return { key: "neutral", score: 0 };
+  if (PLANET_EXALT_SIGN[code] === signIdx) return { key: "exalted", score: 3 };
+  if (PLANET_DEBIL_SIGN[code] === signIdx) return { key: "debilitated", score: -3 };
+  if (PLANET_OWN_SIGNS[code]?.includes(signIdx)) return { key: "own", score: 2 };
+  return { key: "neutral", score: 0 };
+}
+
+const DIGNITY_LABEL = { exalted: "в экзальтации", own: "в своём знаке", neutral: "нейтрально", debilitated: "в падении" };
+const DIGNITY_LABEL_EN = { exalted: "exalted", own: "in its own sign", neutral: "neutral", debilitated: "debilitated" };
+function careerDignityLabel(key, lang) { return (lang === "en" ? DIGNITY_LABEL_EN : DIGNITY_LABEL)[key]; }
+
+// К каким сферам деятельности предрасположена каждая планета — по её классической природе
+// (карака нужных сфер деятельности), не привязано к конкретному дому.
+const CAREER_THEME = {
+  Su: "руководство, управление, госслужба и публичные роли — там, где нужно быть на виду и принимать решения",
+  Mo: "работа с людьми: забота, психология, HR, сфера гостеприимства и питания — там, где важны эмпатия и контакт",
+  Ma: "техника, спорт, армия и силовые структуры, хирургия, производство и стройка — там, где нужны решительность и физическая энергия",
+  Me: "коммуникации, торговля, IT, аналитика, письмо и журналистика, бухгалтерия — там, где важны точность и обмен информацией",
+  Ju: "обучение, право, финансы и консалтинг — там, где ценятся знания, широкий кругозор и умение направлять других",
+  Ve: "искусство, дизайн, индустрия красоты, шоу-бизнес и предметы роскоши — там, где важны эстетика и гармония",
+  Sa: "структурный, долгий труд: недвижимость, сельское хозяйство, добывающая промышленность, административная работа — там, где ценятся терпение и дисциплина",
+};
+const CAREER_THEME_EN = {
+  Su: "leadership, management, government service, and public-facing roles — where visibility and decisiveness matter",
+  Mo: "people-facing work: care, psychology, HR, hospitality and food service — where empathy and personal contact matter",
+  Ma: "engineering, sports, the military and security, surgery, manufacturing and construction — where decisiveness and physical energy matter",
+  Me: "communication, trade, IT, analytics, writing and journalism, accounting — where precision and the exchange of information matter",
+  Ju: "teaching, law, finance, and consulting — where knowledge, a broad outlook, and guiding others are valued",
+  Ve: "arts, design, the beauty industry, entertainment, and luxury goods — where aesthetics and harmony matter",
+  Sa: "structured, long-haul work: real estate, agriculture, extraction industries, administrative work — where patience and discipline are valued",
+};
+function careerTheme(code, lang) { return (lang === "en" ? CAREER_THEME_EN : CAREER_THEME)[code]; }
+
+// Ранжирует 7 классических граха по силе (достоинство + дом) — верхние 1-2 считаются
+// «сильнейшими» и используются для подсказки предрасположенности.
+function assessPredisposition(details) {
+  const ranked = CAREER_PLANETS.map((code) => {
+    const v = details[code];
+    const signIdx = v?.sign ?? null;
+    const house = v?.house ?? null;
+    const dign = planetDignity(code, signIdx);
+    let score = dign.score;
+    if (house != null) {
+      if (STRONG_HOUSES.has(house)) score += 1;
+      else if (DIFFICULT_HOUSES.has(house)) score -= 1;
+    }
+    return { code, signIdx, house, dignKey: dign.key, score };
+  }).sort((a, b) => b.score - a.score);
+  return { ranked, top: ranked.slice(0, 2) };
+}
+
+function CareerPanel({ details, account, onGoToPricing, packageInfo, buying }) {
+  const { lang } = useLang();
+  const isEn = lang === "en";
+  if (!details?.As) return <div style={{ textAlign: "center", color: "#8b84b8", fontSize: 13 }}>{isEn ? "Please wait for the chart to load on the \"Chart\" tab first." : "Сначала дождитесь загрузки карты на вкладке «Карта»."}</div>;
+  const rows = buildHouseRows(details);
+  const a = assessDomain("business", rows, lang);
+  const vm = HOUSE_VERDICT_META[a.verdict];
+  const unlocked = !!account?.hasActivePackage;
+  const pred = assessPredisposition(details);
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ fontSize: 14, color: "#a8a1dd", marginBottom: 14, lineHeight: 1.65 }}>
+        {isEn
+          ? "Career and business through the houses of the chart, plus which fields your strongest planets are naturally suited to."
+          : "Карьера и бизнес по домам карты, а также к каким сферам деятельности предрасположены ваши сильнейшие планеты."}
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "#e8c46b", fontWeight: 600 }}>{a.title}</div>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: vm.bg, color: vm.color }}>{houseVerdictLabel(a.verdict, lang)}</span>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          {a.context.map((t, i) => (
+            <p key={i} style={{ fontSize: 12, color: "#8b84b8", lineHeight: 1.55, marginBottom: 2 }}>{t}</p>
+          ))}
+        </div>
+        {a.pluses.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: "#7fd99a", fontWeight: 600, marginBottom: 4 }}>{isEn ? "Pluses" : "Плюсы"}</div>
+            {a.pluses.map((t, i) => (
+              <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f5c44" }}>{t}</p>
+            ))}
+          </div>
+        )}
+        {(a.minuses.length > 0 || a.watch.length > 0) && (
+          <div style={{ marginBottom: a.advice.length ? 10 : 0 }}>
+            <div style={{ fontSize: 12, color: "#e88b8b", fontWeight: 600, marginBottom: 4 }}>{isEn ? "Points to watch" : "На что обратить внимание"}</div>
+            {[...a.minuses, ...a.watch].map((t, i) => (
+              <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #5c2f2f" }}>{t}</p>
+            ))}
+          </div>
+        )}
+        {a.advice.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: "#9db8e8", fontWeight: 600, marginBottom: 4 }}>{isEn ? "What can be improved and how" : "Что можно поправить и как"}</div>
+            {a.advice.map((t, i) => (
+              <p key={i} style={{ fontSize: 13, color: "#c9c4e8", lineHeight: 1.6, marginBottom: 4, paddingLeft: 10, borderLeft: "2px solid #2f3f5c" }}>{t}</p>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 12, color: "#766fa0", lineHeight: 1.55, paddingTop: 8, borderTop: "1px solid #2e2a5c" }}>
+          <b style={{ color: "#9089c9" }}>{isEn ? "Bottom line:" : "Итог:"}</b> {a.summary}
+        </div>
+      </div>
+
+      <div style={{ background: "#1c1846", borderRadius: 10, padding: 16 }}>
+        <div style={{ fontSize: 13, color: "#e8c46b", marginBottom: 8, fontWeight: 600 }}>{isEn ? "Predisposition" : "Предрасположенность"}</div>
+        <p style={{ fontSize: 12.5, color: "#a8a1dd", lineHeight: 1.6, marginBottom: unlocked ? 12 : 0 }}>
+          {isEn
+            ? "Which of the classical planets is placed strongest in your chart (by dignity — exalted / own sign / debilitated — and by house), and which fields of work that planet's nature is drawn to."
+            : "Какая из классических планет расположена в вашей карте сильнее всего (по достоинству — экзальтация / свой знак / падение — и по дому), и к каким сферам деятельности тянет её природа."}
+        </p>
+        {unlocked ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {pred.top.map(({ code, dignKey, house, signIdx }) => (
+              <div key={code} style={{ paddingLeft: 10, borderLeft: "2px solid #3a3320" }}>
+                <div style={{ fontSize: 12, color: "#e8c46b", fontWeight: 600, marginBottom: 2 }}>
+                  {planetName(code, lang)} — {careerDignityLabel(dignKey, lang)}{signIdx != null ? ` (${signName(signIdx, lang)}${house != null ? `, ${isEn ? "house" : "дом"} ${house}` : ""})` : ""}
+                </div>
+                <p style={{ fontSize: 12.5, color: "#c9c4e8", lineHeight: 1.55 }}>{careerTheme(code, lang)}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <PaywallTeaser
+            title={isEn ? "Which fields suit you best" : "К каким сферам вы предрасположены"}
+            text={isEn
+              ? "A ranking of your strongest planets by classical dignity, and the fields of work each one is naturally drawn to — available with an active request package."
+              : "Рейтинг сильнейших планет вашей карты по классическому достоинству и сферы деятельности, к которым каждая из них тяготеет — доступно с активным пакетом запросов."}
+            goalName="paywall_career_hit"
+            account={account}
+            onGoToPricing={onGoToPricing}
+            packageInfo={packageInfo}
+            buying={buying}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* =========================================================
    UI: семья и дети (для женской карты — Юпитер как карака мужа)
    ========================================================= */
@@ -2636,6 +2794,7 @@ function JyotishAppInner() {
     { id: "chart", label: t("tab_chart") },
     { id: "dasha", label: t("tab_dasha") },
     { id: "houses", label: t("tab_houses") },
+    { id: "career", label: t("tab_career") },
     { id: "family", label: t("tab_family") },
     { id: "synastry", label: t("tab_synastry") },
     { id: "relocation", label: t("tab_relocation") },
@@ -2644,8 +2803,9 @@ function JyotishAppInner() {
   ];
 
   return (
-    <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4" }}>
-      <div style={{ textAlign: "center", marginBottom: 18, position: "relative" }}>
+    <div className="app-root" style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: "#0d0b26", minHeight: "100svh", width: "100%", maxWidth: 960, margin: "0 auto", boxSizing: "border-box", padding: 20, color: "#f1ede4", position: "relative", overflow: "hidden" }}>
+      <div className={`const-${tab}`} style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }} />
+      <div style={{ textAlign: "center", marginBottom: 18, position: "relative", zIndex: 1 }}>
         <button onClick={() => setLang(lang === "ru" ? "en" : "ru")} style={{
           position: "absolute", right: 0, top: 0, background: "#1c1846", color: "#c9c4e8",
           border: "1px solid #332c66", borderRadius: 14, padding: "4px 12px", fontSize: 11,
@@ -2702,6 +2862,8 @@ function JyotishAppInner() {
       )}
 
       {tab === "houses" && <HousesPanel details={chart1.details} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
+
+      {tab === "career" && <CareerPanel details={chart1.details} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
 
       {tab === "family" && <FamilyPanel person={person1} details={chart1.details} periods={dasha1.periods} account={account} onGoToPricing={goToPricing} packageInfo={packageInfo} buying={buying} />}
 
