@@ -1,7 +1,15 @@
 // Тонкий клиент к нашему локальному бэкенду (Astro/backend),
 // который сам ходит в json.astrologyapi.com и прячет ключ.
-
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001";
+//
+// API_BASE специально пустой в проде: запросы идут на тот же домен (astro-gold-three.vercel.app),
+// а Vercel сам проксирует /api/* на backend (см. frontend/vercel.json → rewrites). Так браузер
+// видит сессионную куку как "свою" (first-party), а не куку с чужого домена backend'а — иначе
+// часть браузеров (Chrome в режиме инкогнито, Safari, Firefox с усиленной защитой от трекеров)
+// такую куку просто не сохраняет, и вход по коду не запоминается (код принимается, но при
+// следующем запросе пользователь снова "не вошёл").
+// В деве (localhost) фронтенд и бэкенд всё равно на разных портах — там нужен настоящий адрес
+// бэкенда, поэтому VITE_API_BASE по-прежнему работает как раньше, просто не в проде.
+const API_BASE = import.meta.env.DEV ? (import.meta.env.VITE_API_BASE || "http://localhost:3001") : "";
 
 async function post(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
