@@ -2,27 +2,35 @@ import { pool, dbEnabled } from "./db.js";
 import { PACKAGE_TIERS_USD, findTierUsd, PACKAGE_TIERS, findTier } from "./usage.js";
 
 // Lava.top (LAVALANE LTD, Кипр) — второй платёжный провайдер, для валютных (не-RU) платежей.
-// В отличие от ЮKassa, счёт создаётся не "с нуля", а привязан к заранее созданному в личном
-// кабинете Lava.top продукту ("офферу") с ценой "Цена по запросу API" — сумма передаётся в
-// каждом запросе отдельно (см. LAVA_OFFER_ID в .env).
+// Продукт в личном кабинете Lava.top настроен на ДВА фиксированных тарифа ("5 requests" и
+// "10 requests"), каждый — свой отдельный "оффер" (offerId) со своей ценой. Раньше здесь
+// ожидался один "динамический" оффер с ценой "по запросу через API" — но в кабинете товар
+// не в этом режиме, поэтому и offerId нужен свой на каждый тариф, и поле amount в запросе
+// на создание счёта отправлять нельзя: по документации Lava.top (InvoiceRequestDto/CreateInvoiceV3Request)
+// amount можно передавать только для товаров с динамической ценой — для фиксированной
+// Lava.top сама берёт сумму из цены оффера, а если всё-таки передать amount, получаем
+// ошибку "Product with offer id = '...' is not dynamic price".
 const API_KEY = process.env.LAVA_API_KEY;
-const OFFER_ID = process.env.LAVA_OFFER_ID;
+// Соответствие id тарифа (см. PACKAGE_TIERS/PACKAGE_TIERS_USD в usage.js: "p5" — 5 запросов,
+// "p10" — 10 запросов) → offerId конкретного тарифа в личном кабинете Lava.top.
+const OFFER_IDS = {
+  p5: process.env.LAVA_OFFER_ID_P5,
+  p10: process.env.LAVA_OFFER_ID_P10,
+};
 const WEBHOOK_SECRET = process.env.LAVA_WEBHOOK_SECRET;
 const RETURN_URL_OK = process.env.PAYMENT_RETURN_URL || "https://astro-gold-three.vercel.app/?paid=1";
 const RETURN_URL_FAIL = process.env.LAVA_FAIL_URL || "https://astro-gold-three.vercel.app/?paid=0";
 
-// Считаем интеграцию "включённой", только когда есть и ключ, и id оффера — без оффера создать
-// счёт всё равно нечем.
-const LAVA_ENABLED = !!(API_KEY && OFFER_ID);
+// Считаем интеграцию "включённой", только когда есть ключ и offerId на оба тарифа — без них
+// создать счёт всё равно нечем.
+const LAVA_ENABLED = !!(API_KEY && OFFER_IDS.p5 && OFFER_IDS.p10);
 
 function lavaHeaders() {
   return { "X-Api-Key": API_KEY, "Content-Type": "application/json" };
 }
 
 export async function lavaPackageInfo(req, res) {
-  // currency=RUB — те же тарифы, что раньше были только у ЮKassa, но через Lava.top: оффер
-  // в личном кабинете настроен с динамической ценой сразу в нескольких валютах (см. обсуждение
-  // "сделать лава топ и для RU зоне, оставляем её там тоже).
+  // currency=RUB — те же тарифы, что раньше были только у ЮKassa, но через Lava.top.
   const currency = (req.query?.currency || "USD").toUpperCase();
   if (currency === "RUB") {
     res.json({
@@ -54,10 +62,13 @@ export async function createLavaPayment(req, res) {
   );
   const packageId = pkgRes.rows[0].id;
 
-  if (!LAVA_ENABLED) {
-    // Тестовый режим: LAVA_API_KEY и/или LAVA_OFFER_ID ещё не заполнены в окружении.
-    // Помечаем пакет оплаченным сразу — чтобы можно было проверить остальной цикл
-    // (вход → лимит → списание) без реального оффера/платежа.
+  const offerId = OFFER_IDS[tier.id];
+
+  if (!LAVA_ENABLED || !offerId) {
+    // Тестовый режим: LAVA_API_KEY и/или LAVA_OFFER_ID_P5/LAVA_OFFER_ID_P10 ещё не заполнены
+    // в окружении (или не заполнен offerId именно для этого тарифа). Помечаем пакет оплаченным
+    // сразу — чтобы можно было проверить остальной цикл (вход → лимит → списание) без реального
+    // оффера/платежа.
     await pool.query(
       `UPDATE packages SET status='paid', paid_at=now(), lava_payment_id=$2 WHERE id=$1`,
       [packageId, `test_${packageId}`]
@@ -65,12 +76,13 @@ export async function createLavaPayment(req, res) {
     return res.json({ ok: true, testMode: true, packageId, confirmationUrl: null });
   }
 
-  const amountStr = (tier.amountMinor / 100).toFixed(2);
+  // amount НЕ передаём: оба тарифа в личном кабинете Lava.top — с фиксированной ценой,
+  // а amount в запросе разрешён только для товаров с динамической ценой (см. комментарий
+  // вверху файла). Цену Lava.top берёт сама из цены выбранного offerId.
   const payload = {
     email: req.user.email,
-    offerId: OFFER_ID,
+    offerId,
     currency,
-    amount: amountStr,
     successful_return_url: RETURN_URL_OK,
     failure_return_url: RETURN_URL_FAIL,
     cancel_return_url: RETURN_URL_FAIL,
