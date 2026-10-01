@@ -8,6 +8,7 @@ export const STRINGS = {
   ru: {
     appTitle: "ВЕДИЧЕСКАЯ АСТРОЛОГИЯ",
     appSubtitle: "живые расчёты по данным рождения, сидерический зодиак",
+    appIntro: "Джйотиш — ведическая система астрологии, которая считает карту не по дню рождения вообще, а по точной дате, времени и месту рождения, используя сидерический (звёздный) зодиак. Здесь — бесплатный разбор натальной карты, периодов жизни (даши), совместимости и подбор места для переезда. Не гороскоп на сегодня, а настоящий расчёт по вашим данным.",
 
     tab_chart: "Карта",
     tab_dasha: "Периоды жизни",
@@ -86,6 +87,7 @@ export const STRINGS = {
   en: {
     appTitle: "VEDIC ASTROLOGY",
     appSubtitle: "live calculations from your birth data, sidereal zodiac",
+    appIntro: "Jyotish is the Vedic system of astrology: it reads your chart from the exact date, time and place of birth, using the sidereal zodiac tied to the actual position of the stars. Here you get a free natal chart breakdown, life periods (dasha), compatibility and relocation suggestions — a real calculation from your own data, not a generic daily horoscope.",
 
     tab_chart: "Chart",
     tab_dasha: "Life periods",

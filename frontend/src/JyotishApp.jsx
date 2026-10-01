@@ -2811,9 +2811,12 @@ function JyotishAppInner() {
           border: "1px solid #332c66", borderRadius: 14, padding: "4px 12px", fontSize: 11,
           cursor: "pointer", fontFamily: "system-ui, sans-serif", fontWeight: 600,
         }}>{t("lang_switch_to")}</button>
-        <h1 style={{ fontSize: 22, letterSpacing: 2, color: "#e8c46b", fontWeight: 400, margin: 0 }}>{t("appTitle")}</h1>
-        <div style={{ fontSize: 11, color: "#6f6798", marginTop: 2, fontFamily: "system-ui, sans-serif" }}>
+        <h1 style={{ fontSize: "clamp(28px, 6vw, 38px)", letterSpacing: 2, color: "#e8c46b", fontWeight: 400, margin: 0 }}>{t("appTitle")}</h1>
+        <div style={{ fontSize: 15, color: "#9a92c4", marginTop: 6, fontFamily: "system-ui, sans-serif" }}>
           {t("appSubtitle")}
+        </div>
+        <div style={{ fontSize: 14, lineHeight: 1.5, color: "#8b84b3", marginTop: 10, fontFamily: "system-ui, sans-serif", maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+          {t("appIntro")}
         </div>
       </div>
 
