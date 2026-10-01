@@ -1,5 +1,5 @@
 // Текст условий использования — намеренно без ссылок на законодательство конкретной страны
-// (общий международный формат Terms of Use). Контакт поддержки: mvbern8@gmail.com.
+// (общий международный формат Terms of Use). Контакт поддержки: vastrology.support@gmail.com.
 
 export const OFERTA_SECTIONS = [
   {
@@ -20,7 +20,7 @@ export const OFERTA_SECTIONS = [
   },
   {
     title: "5. Возврат средств",
-    body: `Поскольку доступ к оплаченному расчёту предоставляется сразу после оплаты, возврат обычно не производится — кроме случаев технического сбоя, из-за которого услуга не была оказана, или ошибочного двойного списания. Напишите на mvbern8@gmail.com в течение 14 дней с момента оплаты — мы разберёмся в течение 10 рабочих дней.`,
+    body: `Поскольку доступ к оплаченному расчёту предоставляется сразу после оплаты, возврат обычно не производится — кроме случаев технического сбоя, из-за которого услуга не была оказана, или ошибочного двойного списания. Напишите на vastrology.support@gmail.com в течение 14 дней с момента оплаты — мы разберёмся в течение 10 рабочих дней.`,
   },
   {
     title: "6. Ваши данные",
@@ -36,12 +36,12 @@ export const OFERTA_SECTIONS = [
   },
   {
     title: "9. Связь и разрешение споров",
-    body: `По любым вопросам, включая претензии, пишите на mvbern8@gmail.com — мы отвечаем в течение 30 дней и стараемся решить любой спорный вопрос напрямую, до обращения куда-либо ещё.`,
+    body: `По любым вопросам, включая претензии, пишите на vastrology.support@gmail.com — мы отвечаем в течение 30 дней и стараемся решить любой спорный вопрос напрямую, до обращения куда-либо ещё.`,
   },
   {
     title: "10. Контакты",
     body: `Сервис «Ведическая астрология», astro-gold-three.vercel.app.
-Поддержка: mvbern8@gmail.com`,
+Поддержка: vastrology.support@gmail.com`,
   },
 ];
 
@@ -64,7 +64,7 @@ export const OFERTA_SECTIONS_EN = [
   },
   {
     title: "5. Refunds",
-    body: `Since access to a paid calculation is granted immediately after payment, refunds are generally not issued — except in the case of a technical failure that prevented the service from being delivered, or a mistaken duplicate charge. Email mvbern8@gmail.com within 14 days of payment; we respond within 10 business days.`,
+    body: `Since access to a paid calculation is granted immediately after payment, refunds are generally not issued — except in the case of a technical failure that prevented the service from being delivered, or a mistaken duplicate charge. Email vastrology.support@gmail.com within 14 days of payment; we respond within 10 business days.`,
   },
   {
     title: "6. Your data",
@@ -80,11 +80,11 @@ export const OFERTA_SECTIONS_EN = [
   },
   {
     title: "9. Contact and disputes",
-    body: `For any questions, including complaints, email mvbern8@gmail.com — we respond within 30 days and aim to resolve any disagreement directly, before it needs to go anywhere else.`,
+    body: `For any questions, including complaints, email vastrology.support@gmail.com — we respond within 30 days and aim to resolve any disagreement directly, before it needs to go anywhere else.`,
   },
   {
     title: "10. Contact details",
     body: `"Vedic Astrology" Service, astro-gold-three.vercel.app.
-Support: mvbern8@gmail.com`,
+Support: vastrology.support@gmail.com`,
   },
 ];
